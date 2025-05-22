@@ -11,6 +11,7 @@ exports.initIO = (socketIO) => {
  * GET /
  * Home page.
  */
+<<<<<<< HEAD
 exports.index = async (req, res) => {
   try {
     const corridas = await Race.find({})
@@ -923,4 +924,11 @@ exports.postMensagem = async (req, res) => {
     console.error('Erro ao enviar mensagem:', err);
     res.status(500).json({ error: 'Erro ao enviar mensagem' });
   }
+=======
+exports.index = (req, res) => {
+  res.render('home', {
+    title: 'Home',
+    siteURL: process.env.BASE_URL,
+  });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 };

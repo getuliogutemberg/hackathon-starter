@@ -1,11 +1,9 @@
-const { promisify } = require('util');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const passport = require('passport');
-const _ = require('lodash');
 const validator = require('validator');
 const mailChecker = require('mailchecker');
 const User = require('../models/User');
+<<<<<<< HEAD
 const Race = require('../models/Race');
 
 const randomBytesAsync = promisify(crypto.randomBytes);
@@ -46,6 +44,10 @@ const sendMail = (settings) => {
       return err;
     });
 };
+=======
+const Session = require('../models/Session');
+const nodemailerConfig = require('../config/nodemailer');
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
 /**
  * GET /login
@@ -56,7 +58,7 @@ exports.getLogin = (req, res) => {
     return res.redirect('/');
   }
   res.render('account/login', {
-    title: 'Login'
+    title: 'Login',
   });
 };
 
@@ -64,10 +66,14 @@ exports.getLogin = (req, res) => {
  * POST /login
  * Sign in using email and password.
  */
-exports.postLogin = (req, res, next) => {
+exports.postLogin = async (req, res, next) => {
   const validationErrors = [];
+<<<<<<< HEAD
   if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Insira um endereço de e-mail válido.' });
   if (validator.isEmpty(req.body.password)) validationErrors.push({ msg: 'A chave não pode ficar em branco.' });
+=======
+  if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Please enter a valid email address.' });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
   if (validationErrors.length) {
     req.flash('errors', validationErrors);
@@ -75,15 +81,82 @@ exports.postLogin = (req, res, next) => {
   }
   req.body.email = validator.normalizeEmail(req.body.email, { gmail_remove_dots: false });
 
+  // Check if user wants to login by email link
+  if (req.body.loginByEmailLink === 'on') {
+    try {
+      const user = await User.findOne({ email: { $eq: req.body.email } });
+      if (!user) {
+        console.log('Login by email link: User not found');
+        // we need to show the same message as successfulMsg to avoid an enumeration vulnerability
+        req.flash('info', { msg: 'We are sending further instructions to the email you provided, if there is an account with that email address in our system.' });
+        return res.redirect('/login');
+      }
+
+      const token = await User.generateToken();
+      user.loginToken = token;
+      user.loginExpires = Date.now() + 900000; // 15 min
+      user.loginIpHash = User.hashIP(req.ip);
+      await user.save();
+
+      const mailOptions = {
+        to: user.email,
+        from: process.env.SITE_CONTACT_EMAIL,
+        subject: 'Login Link',
+        text: `Hello,
+Please click on the following link to log in:
+
+${process.env.BASE_URL}/login/verify/${token}
+
+If you didn't request this login, please ignore this email and make sure you can still access your account.
+
+For security:
+- Never share this link with anyone
+- We'll never ask you to send us this link
+- Only use this link on the same device/browser where you requested it
+- This link will expire in 15 minutes and can only be used once
+
+Thank you!\n`,
+      };
+
+      await nodemailerConfig.sendMail({
+        mailOptions,
+        successfulType: 'info',
+        successfulMsg: 'We are sending further instructions to the email you provided, if there is an account with that email address in our system.',
+        loggingError: 'ERROR: Could not send login by email link.',
+        errorType: 'errors',
+        errorMsg: 'We encountered an issue sending instructions. Please try again later.',
+        req,
+      });
+
+      return res.redirect('/login');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // Regular password login
+  if (validator.isEmpty(req.body.password)) {
+    req.flash('errors', 'Password cannot be blank.');
+    return res.redirect('/login');
+  }
   passport.authenticate('local', (err, user, info) => {
-    if (err) { return next(err); }
+    if (err) {
+      return next(err);
+    }
     if (!user) {
       req.flash('errors', info);
       return res.redirect('/login');
     }
     req.logIn(user, (err) => {
+<<<<<<< HEAD
       if (err) { return next(err); }
       req.flash('success', { msg: 'Sucesso! Você está logado.' });
+=======
+      if (err) {
+        return next(err);
+      }
+      req.flash('success', { msg: 'Success! You are logged in.' });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
       res.redirect(req.session.returnTo || '/');
     });
   })(req, res, next);
@@ -113,9 +186,89 @@ exports.getSignup = (req, res) => {
     return res.redirect('/');
   }
   res.render('account/signup', {
-    title: 'Create Account'
+    title: 'Create Account',
   });
 };
+
+/**
+ * Helper to send passwordless login link if a user is trying to create an account
+ * but we already have an account for that email address.
+ * This process with ambigious flash messages is a part of the security measure to
+ * mitigate account enumeration attacks.
+ */
+async function sendPasswordlessLoginLinkIfUserExists(user, req) {
+  const token = await User.generateToken();
+  user.loginToken = token;
+  user.loginExpires = Date.now() + 900000; // 15 min
+  user.loginIpHash = User.hashIP(req.ip);
+  await user.save();
+
+  const mailOptions = {
+    to: user.email,
+    from: process.env.SITE_CONTACT_EMAIL,
+    subject: 'Login Link',
+    text: `Hello,
+We found an existing account for this email. Please use the following link to log in:
+
+${process.env.BASE_URL}/login/verify/${token}
+
+If you didn't request this login, please ignore this email.
+
+Once logged in, you can go to your profile page to set or change your password.
+
+Thank you!\n`,
+  };
+  await nodemailerConfig.sendMail({
+    mailOptions,
+    successfulType: 'info',
+    successfulMsg: 'An email has been sent to the email address you provided with further instructions.',
+    loggingError: 'ERROR: Could not send login by email link.',
+    errorType: 'errors',
+    errorMsg: 'We encountered an issue sending instructions. Please try again later.',
+    req,
+  });
+}
+
+/**
+ * Helper to send passwordless signup link for new users.
+ */
+async function sendPasswordlessSignupLink(user, req) {
+  const token = await User.generateToken();
+  user.loginToken = token;
+  user.loginExpires = Date.now() + 900000; // 15 min
+  user.loginIpHash = User.hashIP(req.ip);
+  await user.save();
+
+  const mailOptions = {
+    to: user.email,
+    from: process.env.SITE_CONTACT_EMAIL,
+    subject: 'Login Link',
+    text: `Hello,
+Please click on the following link to log in:
+
+${process.env.BASE_URL}/login/verify/${token}
+
+If you didn't request this login, please ignore this email and make sure you can still access your account.
+
+For security:
+- Never share this link with anyone
+- We'll never ask you to send us this link
+- Only use this link on the same device/browser where you requested it
+- This link will expire in 15 minutes and can only be used once
+
+Thank you!\n`,
+  };
+
+  await nodemailerConfig.sendMail({
+    mailOptions,
+    successfulType: 'info',
+    successfulMsg: 'An email has been sent to the email address you provided with further instructions.',
+    loggingError: 'ERROR: Could not send login by email link.',
+    errorType: 'errors',
+    errorMsg: 'Error sending login email. Please try again later.',
+    req,
+  });
+}
 
 /**
  * POST /signup
@@ -123,29 +276,63 @@ exports.getSignup = (req, res) => {
  */
 exports.postSignup = async (req, res, next) => {
   const validationErrors = [];
+<<<<<<< HEAD
   if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Insira um endereço de e-mail válido.' });
   if (!validator.isLength(req.body.password, { min: 8 })) validationErrors.push({ msg: 'A chave deve ter pelo menos 8 caracteres' });
   if (validator.escape(req.body.password) !== validator.escape(req.body.confirmPassword)) validationErrors.push({ msg: 'As chaves não coincidem' });
+=======
+  if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Please enter a valid email address.' });
+
+  if (!req.body.passwordless) {
+    if (!validator.isLength(req.body.password, { min: 8 })) validationErrors.push({ msg: 'Password must be at least 8 characters long' });
+    if (validator.escape(req.body.password) !== validator.escape(req.body.confirmPassword)) validationErrors.push({ msg: 'Passwords do not match' });
+  }
+
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
   if (validationErrors.length) {
     req.flash('errors', validationErrors);
     return res.redirect('/signup');
   }
   req.body.email = validator.normalizeEmail(req.body.email, { gmail_remove_dots: false });
+  if (!mailChecker.isValid(req.body.email)) {
+    req.flash('errors', { msg: 'The email address is invalid or disposable and can not be verified.  Please update your email address and try again.' });
+    return res.redirect('/signup');
+  }
+
   try {
-    const existingUser = await User.findOne({ email: req.body.email });
+    const existingUser = await User.findOne({ email: { $eq: req.body.email } });
+
     if (existingUser) {
+<<<<<<< HEAD
       req.flash('errors', { msg: 'Já existe uma conta com esse endereço de e-mail.' });
       return res.redirect('/signup');
+=======
+      // Always send login link and generic message if email exists
+      await sendPasswordlessLoginLinkIfUserExists(existingUser, req);
+      return res.redirect('/login');
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
     }
+
+    // For passwordless signup, generate a random password
+    const password = req.body.passwordless ? crypto.randomBytes(16).toString('hex') : req.body.password;
     const user = new User({
       email: req.body.email,
-      password: req.body.password
+      password,
     });
+
     await user.save();
+
+    if (req.body.passwordless) {
+      await sendPasswordlessSignupLink(user, req);
+      return res.redirect('/');
+    }
+
+    // For regular signup, log the user in
     req.logIn(user, (err) => {
       if (err) {
         return next(err);
       }
+      req.flash('success', { msg: 'Success! You are logged in.' });
       res.redirect('/');
     });
   } catch (err) {
@@ -159,7 +346,7 @@ exports.postSignup = async (req, res, next) => {
  */
 exports.getAccount = (req, res) => {
   res.render('account/profile', {
-    title: 'Account Management'
+    title: 'Account Management',
   });
 };
 
@@ -169,13 +356,21 @@ exports.getAccount = (req, res) => {
  */
 exports.postUpdateProfile = async (req, res, next) => {
   const validationErrors = [];
+<<<<<<< HEAD
   if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Insira um endereço de e-mail válido.' });
 
+=======
+  if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Please enter a valid email address.' });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
   if (validationErrors.length) {
     req.flash('errors', validationErrors);
     return res.redirect('/account');
   }
   req.body.email = validator.normalizeEmail(req.body.email, { gmail_remove_dots: false });
+  if (!mailChecker.isValid(req.body.email)) {
+    req.flash('errors', { msg: 'The email address is invalid or disposable and can not be verified.  Please update your email address and try again.' });
+    return res.redirect('/account');
+  }
   try {
     const user = await User.findById(req.user.id);
     if (user.email !== req.body.email) user.emailVerified = false;
@@ -189,10 +384,21 @@ exports.postUpdateProfile = async (req, res, next) => {
     res.redirect('/account');
   } catch (err) {
     if (err.code === 11000) {
+<<<<<<< HEAD
       req.flash('errors', { msg: 'O endereço de e-mail que você digitou já está associado a uma conta.' });
       return res.redirect('/account');
+=======
+      console.log('Duplicate email address when trying to update the profile email.');
+    } else {
+      console.log('Error updating profile', err);
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
     }
-    next(err);
+    // Generic error message for the user. Do not reveal the cause of the error tsuch as
+    // the new email being in the system to the user to avoid enumeration vulenrability.
+    req.flash('errors', {
+      msg: "We encountered an issue updating your email address. If you suspect you have duplicate accounts, please log in with the other email address you've used or contact support for assistance. You can delete duplicate accounts from your account settings.",
+    });
+    return res.redirect('/account');
   }
 };
 
@@ -250,27 +456,69 @@ exports.getOauthUnlink = async (req, res, next) => {
     provider = validator.escape(provider);
     const user = await User.findById(req.user.id);
     user[provider.toLowerCase()] = undefined;
-    const tokensWithoutProviderToUnlink = user.tokens.filter((token) =>
-      token.kind !== provider.toLowerCase());
+    const tokensWithoutProviderToUnlink = user.tokens.filter((token) => token.kind !== provider.toLowerCase());
     // Some auth providers do not provide an email address in the user profile.
     // As a result, we need to verify that unlinking the provider is safe by ensuring
     // that another login method exists.
-    if (
-      !(user.email && user.password)
-      && tokensWithoutProviderToUnlink.length === 0
-    ) {
+    if (!(user.email && user.password) && tokensWithoutProviderToUnlink.length === 0) {
       req.flash('errors', {
+<<<<<<< HEAD
         msg: `${_.startCase(_.toLower(provider))} a conta não pode ser desvinculada sem outra forma de login habilitada.`
         + ' Vincule outra conta ou adicione um endereço de e-mail e chave.'
+=======
+        msg: `The ${provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase()} account cannot be unlinked without another form of login enabled. Please link another account or add an email address and password.`,
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
       });
       return res.redirect('/account');
     }
     user.tokens = tokensWithoutProviderToUnlink;
     await user.save();
     req.flash('info', {
+<<<<<<< HEAD
       msg: `${_.startCase(_.toLower(provider))} a conta foi desvinculada.`,
+=======
+      msg: `${provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase()} account has been unlinked.`,
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
     });
     res.redirect('/account');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /login/verify/:token
+ * Login by email link
+ */
+exports.getLoginByEmail = async (req, res, next) => {
+  if (req.user) {
+    return res.redirect('/');
+  }
+  const validationErrors = [];
+  if (!validator.isHexadecimal(req.params.token)) validationErrors.push({ msg: 'Invalid or expired login link.' });
+  if (validationErrors.length) {
+    req.flash('errors', validationErrors);
+    return res.redirect('/login');
+  }
+
+  try {
+    const user = await User.findOne({ loginToken: { $eq: req.params.token } });
+
+    if (!user || !user.verifyTokenAndIp(user.loginToken, req.ip, 'login')) {
+      req.flash('errors', { msg: 'Invalid or expired login link.' });
+      return res.redirect('/login');
+    }
+
+    user.emailVerified = true; // Mark email as verified since they also proved ownership
+    await user.save();
+
+    req.logIn(user, (err) => {
+      if (err) {
+        return next(err);
+      }
+      req.flash('success', { msg: 'Success! You are logged in.' });
+      res.redirect(req.session.returnTo || '/');
+    });
   } catch (err) {
     next(err);
   }
@@ -286,25 +534,35 @@ exports.getReset = async (req, res, next) => {
       return res.redirect('/');
     }
     const validationErrors = [];
+<<<<<<< HEAD
     if (!validator.isHexadecimal(req.params.token)) validationErrors.push({ msg: 'Token inválido.  Por favor, tente novamente.' });
+=======
+    if (!validator.isHexadecimal(req.params.token)) validationErrors.push({ msg: 'Invalid or expired password reset link.' });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
     if (validationErrors.length) {
       req.flash('errors', validationErrors);
       return res.redirect('/forgot');
     }
 
+<<<<<<< HEAD
     const user = await User.findOne({
       passwordResetToken: req.params.token,
       passwordResetExpires: { $gt: Date.now() }
     }).exec();
     if (!user) {
       req.flash('errors', { msg: 'O token de redefinição de senha é inválido ou expirou.' });
+=======
+    const user = await User.findOne({ passwordResetToken: { $eq: req.params.token } });
+    if (!user || !user.verifyTokenAndIp(user.passwordResetToken, req.ip, 'passwordReset')) {
+      req.flash('errors', { msg: 'Invalid or expired password reset link.' });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
       return res.redirect('/forgot');
     }
     res.render('account/reset', {
-      title: 'Password Reset'
+      title: 'Password Reset',
     });
   } catch (err) {
-    return next(err);
+    next(err);
   }
 };
 
@@ -312,19 +570,24 @@ exports.getReset = async (req, res, next) => {
  * GET /account/verify/:token
  * Verify email address
  */
-exports.getVerifyEmailToken = (req, res, next) => {
+exports.getVerifyEmailToken = async (req, res, next) => {
   if (req.user.emailVerified) {
     req.flash('info', { msg: 'O endereço de e-mail foi verificado.' });
     return res.redirect('/account');
   }
 
   const validationErrors = [];
+<<<<<<< HEAD
   if (validator.escape(req.params.token) && (!validator.isHexadecimal(req.params.token))) validationErrors.push({ msg: 'Token inválido.  Por favor, tente novamente.' });
+=======
+  if (validator.escape(req.params.token) && !validator.isHexadecimal(req.params.token)) validationErrors.push({ msg: 'Invalid or expired verification link.' });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
   if (validationErrors.length) {
     req.flash('errors', validationErrors);
     return res.redirect('/account');
   }
 
+<<<<<<< HEAD
   if (req.params.token === req.user.emailVerificationToken) {
     User
       .findOne({ email: req.user.email })
@@ -346,6 +609,22 @@ exports.getVerifyEmailToken = (req, res, next) => {
       });
   } else {
     req.flash('errors', { msg: 'O link de verificação era inválido ou refere-se a uma conta diferente.' });
+=======
+  try {
+    if (!req.user.verifyTokenAndIp(req.user.emailVerificationToken, req.ip, 'emailVerification')) {
+      req.flash('errors', { msg: 'Invalid or expired verification link.' });
+      return res.redirect('/account');
+    }
+
+    req.user.emailVerified = true;
+    await req.user.save();
+
+    req.flash('success', { msg: 'Thank you for verifying your email address.' });
+    return res.redirect('/account');
+  } catch (err) {
+    console.log('Error saving the user profile to the database after email verification', err);
+    req.flash('errors', { msg: 'There was an error verifying your email. Please try again.' });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
     return res.redirect('/account');
   }
 };
@@ -354,9 +633,13 @@ exports.getVerifyEmailToken = (req, res, next) => {
  * GET /account/verify
  * Verify email address
  */
-exports.getVerifyEmail = (req, res, next) => {
+exports.getVerifyEmail = async (req, res, next) => {
   if (req.user.emailVerified) {
+<<<<<<< HEAD
     req.flash('info', { msg: 'O endereço de e-mail foi verificado.' });
+=======
+    req.flash('info', { msg: 'The email address has already been verified.' });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
     return res.redirect('/account');
   }
 
@@ -365,23 +648,17 @@ exports.getVerifyEmail = (req, res, next) => {
     return res.redirect('/account');
   }
 
-  const createRandomToken = randomBytesAsync(16)
-    .then((buf) => buf.toString('hex'));
+  try {
+    const token = await User.generateToken();
+    req.user.emailVerificationToken = token;
+    req.user.emailVerificationExpires = Date.now() + 900000; // 15 minutes
+    req.user.emailVerificationIpHash = User.hashIP(req.ip);
+    await req.user.save();
 
-  const setRandomToken = (token) => {
-    User
-      .findOne({ email: req.user.email })
-      .then((user) => {
-        user.emailVerificationToken = token;
-        user = user.save();
-      });
-    return token;
-  };
-
-  const sendVerifyEmail = (token) => {
     const mailOptions = {
       to: req.user.email,
       from: process.env.SITE_CONTACT_EMAIL,
+<<<<<<< HEAD
       subject: 'Verifique seu endereço de e-mail no ModuloApp',
       text: `Obrigado por se registrar no ModuloApp\n\n
         Para verificar seu endereço de e-mail, clique no link a seguir ou cole-o em seu navegador:\n\n
@@ -400,19 +677,44 @@ exports.getVerifyEmail = (req, res, next) => {
     };
     return sendMail(mailSettings);
   };
+=======
+      subject: 'Please verify your email address',
+      text: `Hello,
+Please verify your email address by clicking on the following link:
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
-  createRandomToken
-    .then(setRandomToken)
-    .then(sendVerifyEmail)
-    .then(() => res.redirect('/account'))
-    .catch(next);
+${process.env.BASE_URL}/account/verify/${token}
+
+For security:
+- Never share this link with anyone
+- We'll never ask you to send us this link
+- Only use this link on the same device/browser where you requested it
+- This link will expire in 15 minutes and can only be used once
+  
+Thank you!\n`,
+    };
+
+    await nodemailerConfig.sendMail({
+      mailOptions,
+      successfulType: 'info',
+      successfulMsg: `An email has been sent to ${req.user.email} with verification instructions.`,
+      loggingError: 'ERROR: Could not send verification email.',
+      errorType: 'errors',
+      errorMsg: 'Error sending verification email. Please try again later.',
+      req,
+    });
+
+    return res.redirect('/account');
+  } catch (err) {
+    next(err);
+  }
 };
 
 /**
  * POST /reset/:token
  * Process the reset password request.
  */
-exports.postReset = (req, res, next) => {
+exports.postReset = async (req, res, next) => {
   const validationErrors = [];
   if (!validator.isLength(req.body.password, { min: 8 })) validationErrors.push({ msg: 'A chaves deve ter pelo menos 8 caracteres' });
   if (validator.escape(req.body.password) !== validator.escape(req.body.confirm)) validationErrors.push({ msg: 'As chaves não coincidem' });
@@ -420,9 +722,10 @@ exports.postReset = (req, res, next) => {
 
   if (validationErrors.length) {
     req.flash('errors', validationErrors);
-    return res.redirect('back');
+    return res.redirect(req.get('Referrer') || '/');
   }
 
+<<<<<<< HEAD
   const resetPassword = () =>
     User
       .findOne({ passwordResetToken: req.params.token })
@@ -442,17 +745,34 @@ exports.postReset = (req, res, next) => {
           });
         }));
       });
+=======
+  try {
+    const user = await User.findOne({ passwordResetToken: { $eq: req.params.token } });
+    if (!user || !user.verifyTokenAndIp(user.passwordResetToken, req.ip, 'passwordReset')) {
+      req.flash('errors', { msg: 'Password reset token is invalid or has expired.' });
+      return res.redirect(user.get('Referrer') || '/');
+    }
+    user.password = req.body.password;
+    user.emailVerified = true; // Mark email as verified as well since they proved ownership
+    await user.save();
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
-  const sendResetPasswordEmail = (user) => {
-    if (!user) { return; }
     const mailOptions = {
       to: user.email,
       from: process.env.SITE_CONTACT_EMAIL,
+<<<<<<< HEAD
       subject: 'Sua senha do ModuloApp foi alterada',
       text: `Olá,\n\nEsta é uma confirmação de que a chave da sua conta ${user.email} acabou de ser alterada.\n`
+=======
+      subject: 'Your password has been changed',
+      text: `This is a confirmation that the password for your account ${user.email} has just been changed.\n`,
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
     };
-    const mailSettings = {
+
+    await nodemailerConfig.sendMail({
+      mailOptions,
       successfulType: 'success',
+<<<<<<< HEAD
       successfulMsg: 'Sucesso! Sua cahve foi alterada.',
       loggingError: 'ERRO: Não foi possível enviar o e-mail de confirmação de redefinição de senha após o downgrade de segurança.\n',
       errorType: 'warning',
@@ -462,11 +782,19 @@ exports.postReset = (req, res, next) => {
     };
     return sendMail(mailSettings);
   };
+=======
+      successfulMsg: 'Success! Your password has been changed.',
+      loggingError: 'ERROR: Could not send password reset confirmation email.',
+      errorType: 'warning',
+      errorMsg: 'Your password has been changed, but we could not send you a confirmation email. We will be looking into it.',
+      req,
+    });
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
-  resetPassword()
-    .then(sendResetPasswordEmail)
-    .then(() => { if (!res.finished) res.redirect('/'); })
-    .catch((err) => next(err));
+    res.redirect('/');
+  } catch (err) {
+    next(err);
+  }
 };
 
 /**
@@ -478,7 +806,7 @@ exports.getForgot = (req, res) => {
     return res.redirect('/');
   }
   res.render('account/forgot', {
-    title: 'Forgot Password'
+    title: 'Forgot Password',
   });
 };
 
@@ -486,7 +814,7 @@ exports.getForgot = (req, res) => {
  * POST /forgot
  * Create a random token, then the send user an email with a reset link.
  */
-exports.postForgot = (req, res, next) => {
+exports.postForgot = async (req, res, next) => {
   const validationErrors = [];
   if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Insira um endereço de e-mail válido.' });
 
@@ -496,9 +824,16 @@ exports.postForgot = (req, res, next) => {
   }
   req.body.email = validator.normalizeEmail(req.body.email, { gmail_remove_dots: false });
 
-  const createRandomToken = randomBytesAsync(16)
-    .then((buf) => buf.toString('hex'));
+  try {
+    const user = await User.findOne({ email: { $eq: req.body.email.toLowerCase() } });
+    if (!user) {
+      console.log('Forgot password: User not found');
+      // Generic message to avoid enumeration vunerability
+      req.flash('info', { msg: 'If an account with that email exists, you will receive password reset instructions.' });
+      return res.redirect('/forgot');
+    }
 
+<<<<<<< HEAD
   const setRandomToken = (token) =>
     User
       .findOne({ email: req.body.email })
@@ -512,13 +847,18 @@ exports.postForgot = (req, res, next) => {
         }
         return user;
       });
+=======
+    const token = await User.generateToken();
+    user.passwordResetToken = token;
+    user.passwordResetExpires = Date.now() + 900000; // 15 minutes
+    user.passwordResetIpHash = User.hashIP(req.ip);
+    await user.save();
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
-  const sendForgotPasswordEmail = (user) => {
-    if (!user) { return; }
-    const token = user.passwordResetToken;
     const mailOptions = {
       to: user.email,
       from: process.env.SITE_CONTACT_EMAIL,
+<<<<<<< HEAD
       subject: 'Redefina sua senha no ModuloApp',
       text: `Você está recebendo este e-mail porque você (ou outra pessoa) solicitou a redefinição da chave da sua conta.\n\n
         Clique no link a seguir ou cole-o em seu navegador para concluir o processo:\n\n
@@ -536,12 +876,59 @@ exports.postForgot = (req, res, next) => {
     };
     return sendMail(mailSettings);
   };
+=======
+      subject: 'Reset your password',
+      text: `Hello,
+You are receiving this email because you (or someone else) requested a password reset. Please click on the following link to complete the process:
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
-  createRandomToken
-    .then(setRandomToken)
-    .then(sendForgotPasswordEmail)
-    .then(() => res.redirect('/forgot'))
-    .catch(next);
+${process.env.BASE_URL}/reset/${token}
+
+If you did not request this, please ignore this email and your password will remain unchanged.
+
+For security:
+- Never share this link with anyone
+- We'll never ask you to send us this link
+- Only use this link on the same device/browser where you requested it
+- This link will expire in 15 minutes and can only be used once
+
+Thank you!\n`,
+    };
+
+    await nodemailerConfig.sendMail({
+      mailOptions,
+      successfulType: 'info',
+      successfulMsg: `If an account with that email exists, you will receive password reset instructions.`,
+      loggingError: 'ERROR: Could not send password reset email.',
+      errorType: 'errors',
+      errorMsg: 'We encountered an issue sending instructions. Please try again later.',
+      req,
+    });
+
+    return res.redirect('/forgot');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /account/logout-everywhere
+ * Logout current user from all devices
+ */
+exports.postLogoutEverywhere = async (req, res, next) => {
+  const userId = req.user.id;
+  try {
+    await Session.removeSessionByUserId(userId);
+    req.logout((err) => {
+      if (err) {
+        return next(err);
+      }
+      req.flash('info', { msg: 'You have been logged out of all sessions.' });
+      res.redirect('/');
+    });
+  } catch (err) {
+    return next(err);
+  }
 };
 
 exports.getCarteira = async (req, res) => {

@@ -1,4 +1,5 @@
 /* eslint-env jquery, browser */
+<<<<<<< HEAD
 $(document).ready(() => {
   // Gerenciamento do tema
   const themeSwitch = document.getElementById('themeSwitch');
@@ -68,6 +69,12 @@ $(document).ready(() => {
         break;
     }
   });
+=======
+/* global $ */
+
+$(() => {
+  // Place JavaScript code here...
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 });
 
 // Função para aplicar o tema

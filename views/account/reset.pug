@@ -5,6 +5,7 @@ block content
     h3 Recuperar Chave
   form(method='POST')
     input(type='hidden', name='_csrf', value=_csrf)
+<<<<<<< HEAD
     .form-group.row
       label.col-md-3.col-form-label.font-weight-bold.text-right(for='password') Nova Chave
       .col-md-7
@@ -17,3 +18,19 @@ block content
       button.btn.btn-primary.btn-reset(type='submit')
         i.far.fa-keyboard.fa-sm
         | Salvar
+=======
+    .form-group.row.mb-4
+      label.col-md-3.col-form-label.font-weight-bold.text-right(for='password') New Password
+      .col-md-7
+        input#password.form-control(type='password', name='password', placeholder='New password', autofocus, autocomplete='new-password', minlength='8', required)
+    .form-group.row.mb-4
+      label.col-md-3.col-form-label.font-weight-bold.text-right(for='confirm') Confirm Password
+      .col-md-7
+        input#confirm.form-control(type='password', name='confirm', placeholder='Confirm password', autocomplete='new-password', minlength='8', required)
+    .form-group.row
+      .col-md-3
+      .col-md-7
+        button.btn.btn-primary.btn-reset(type='submit')
+          i.far.fa-keyboard.fa-sm.mr-2.iconpadding
+          | Change Password
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242

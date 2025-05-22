@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 nav.navbar.navbar-expand-lg.navbar-dark.bg-primary.fixed-top
   .container-fluid
     a.navbar-brand(href='/')
@@ -38,6 +39,26 @@ nav.navbar.navbar-expand-lg.navbar-dark.bg-primary.fixed-top
               a.nav-link(href='/races')
                 i.fas.fa-flag-checkered.me-1
                 | Gerenciar Corridas
+=======
+nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
+  .container
+    a.navbar-brand(href='/')
+      img.d-inline-block.align-text-top(src='/bootstrap-logo.svg', alt='', width='30', height='24')
+      |
+      | Hackathon Starter
+    button.navbar-toggler(type='button', data-bs-toggle='collapse', data-bs-target='#navbarColor01', aria-controls='navbarColor01', aria-expanded='false', aria-label='Toggle navigation')
+      span.navbar-toggler-icon
+    #navbarColor01.collapse.navbar-collapse
+      ul.navbar-nav.me-auto.mb-2.mb-lg-0
+        li.nav-item
+          a.nav-link(class=title === 'Home' ? 'active' : '', href='/') Home
+        li.nav-item
+          a.nav-link(class=title === 'AI Examples' ? 'active' : '', href='/ai') AI Examples
+        li.nav-item
+          a.nav-link(class=title === 'API Examples' ? 'active' : '', href='/api') API Examples
+        li.nav-item
+          a.nav-link(class=title === 'Contact' ? 'active' : '', href='/contact') Contact
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
       // Menu da direita
       ul.navbar-nav.ms-auto
@@ -47,6 +68,7 @@ nav.navbar.navbar-expand-lg.navbar-dark.bg-primary.fixed-top
           li.nav-item(class=(title === 'Create Account') ? 'active' : undefined)
             a.nav-link(href='/signup') Criar Conta
         else
+<<<<<<< HEAD
           li.nav-item.dropdown
             a.nav-link.dropdown-toggle.d-flex.align-items-center(href='#', data-bs-toggle='dropdown')
               if user.profile.picture
@@ -92,3 +114,7 @@ block append head
       color: #ffd700;
     }
 
+=======
+          a.btn.btn-primary.me-2(href='/account') My Account
+          a.btn.btn-outline-danger(href='/logout') Sign out
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242

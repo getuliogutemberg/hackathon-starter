@@ -1,8 +1,13 @@
 doctype html
+<<<<<<< HEAD
 html(lang='pt-br', data-theme=theme)
+=======
+html.h-100(lang='en')
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
   head
     meta(charset='utf-8')
     meta(name='viewport', content='width=device-width, initial-scale=1.0')
+<<<<<<< HEAD
     title #{title} - SpeedRush
     
     style.
@@ -17,6 +22,18 @@ html(lang='pt-br', data-theme=theme)
         --navbar-bg: #0d6efd;
         --navbar-text: #ffffff;
       }
+=======
+    meta(name='csrf-token', content=_csrf)
+    //- Facebook App ID
+    meta(property='fb:app_id', content=FACEBOOK_ID)
+
+    title #{ title } - Hackathon Starter
+    link(rel='shortcut icon', href='/favicon.ico')
+    //link(rel='stylesheet', href='/css/bootstrap.min.css')
+    link(rel='stylesheet', href='/css/main.css')
+    link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css')
+    block head
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
 
       [data-theme="dark"] {
         --bg-primary: #1a1a1a;
@@ -85,6 +102,61 @@ html(lang='pt-br', data-theme=theme)
     script(src='/js/lib/popper.min.js')
     script(src='/js/lib/bootstrap.min.js')
     script(src='/js/main.js')
+<<<<<<< HEAD
     script(src='/socket.io/socket.io.js')
     
     block scripts
+=======
+    script(src='https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js')
+
+    script(type='text/javascript').
+      window.cookieconsent.initialise({
+        palette: {
+          popup: {
+            background: '#f8f9fa',
+          },
+          button: {
+            background: '#343a40',
+          },
+        },
+        position: 'bottom-right',
+        content: {
+          href: '/privacy-policy.html',
+        },
+      });
+
+    //- Google Analytics  GA4
+    if GOOGLE_ANALYTICS_ID
+      script(async, src=`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`)
+      script.
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+          dataLayer.push(arguments);
+        }
+        gtag('js', new Date());
+        gtag('config', '#{GOOGLE_ANALYTICS_ID}');
+
+    //- Facebook Pixel Code
+    if FACEBOOK_PIXEL_ID
+      script.
+        !(function (f, b, e, v, n, t, s) {
+          if (f.fbq) return;
+          n = f.fbq = function () {
+            n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+          };
+          if (!f._fbq) f._fbq = n;
+          n.push = n;
+          n.loaded = !0;
+          n.version = '2.0';
+          n.queue = [];
+          t = b.createElement(e);
+          t.async = !0;
+          t.src = v;
+          s = b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t, s);
+        })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '#{FACEBOOK_PIXEL_ID}');
+        fbq('track', 'PageView');
+      noscript
+        img(height='1', width='1', style='display: none', src=`https://www.facebook.com/tr?id=${FACEBOOK_PIXEL_ID}&ev=PageView&noscript=1`)
+>>>>>>> 1d136821bb80d251688e80ebce8407700fe1d242
