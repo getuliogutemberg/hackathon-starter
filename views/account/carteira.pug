@@ -1,0 +1,127 @@
+extends ../layout
+
+block content
+  .page-header
+    h3 Minha Carteira
+    
+  .row
+    .col-md-6.mb-4
+      .card
+        .card-body
+          h4.card-title Saldo de Pontos
+          h2.text-primary
+            i.fas.fa-coins.me-2
+            | #{user.carteira.pontos} pts
+          
+          .alert.alert-info.mt-3
+            i.fas.fa-info-circle.me-2
+            | Custo: R$ 10,00 por 100 pontos
+          
+          if user.carteira.premios >= 10
+            form(action='/carteira/comprar', method='POST')
+              input(type='hidden', name='_csrf', value=_csrf)
+              button.btn.btn-success.mt-3(type='submit')
+                i.fas.fa-shopping-cart.me-2
+                | Comprar 100 Pontos usando Reais
+                small.d-block.text-light Será debitado R$ 10,00 do seu saldo
+
+    .col-md-6.mb-4
+      .card
+        .card-body
+          h4.card-title Saldo em Reais
+          h2.text-success
+            i.fas.fa-money-bill.me-2
+            | R$ #{user.carteira.premios.toFixed(2)}
+          
+          - const totalPremiacoes = user.carteira.historico.filter(t => t.tipo === 'premio').reduce((acc, t) => acc + t.quantidade, 0)
+          p.text-muted.mt-2
+            i.fas.fa-trophy.me-2
+            | Total em Premiações: R$ #{totalPremiacoes.toFixed(2)}
+          
+          .d-flex.gap-2.mt-3
+            form(action='/carteira/depositar', method='POST')
+              input(type='hidden', name='_csrf', value=_csrf)
+              button.btn.btn-primary(type='submit')
+                i.fas.fa-university.me-2
+                | Depositar R$ 10,00
+                small.d-block.text-light Adicione mais dinheiro
+            
+            if user.carteira.premios >= 10
+              form(action='/carteira/sacar', method='POST')
+                input(type='hidden', name='_csrf', value=_csrf)
+                button.btn.btn-warning(type='submit')
+                  i.fas.fa-money-bill-wave.me-2
+                  | Sacar R$ 10,00
+                  small.d-block.text-light Retire seu dinheiro
+              
+  .row
+    .col-12
+      .card
+        .card-body
+          h4.card-title Histórico
+          .table-responsive
+            table.table
+              thead
+                tr
+                  th Data
+                  th Tipo
+                  th Quantidade
+                  th Corrida
+                  th Detalhes
+              tbody
+                each transacao in user.carteira.historico.sort((a,b) => b.data - a.data)
+                  tr
+                    td #{new Date(transacao.data).toLocaleString()}
+                    td
+                      case transacao.tipo
+                        when 'compra'
+                          if transacao.isPremio
+                            span.badge.bg-success Compra com Reais
+                          else
+                            span.badge.bg-success Compra de Pontos
+                        when 'uso'
+                          span.badge.bg-primary Uso em Corrida
+                        when 'premio'
+                          span.badge.bg-warning Premiação
+                          if transacao.posicao
+                            small.ms-1 #{transacao.posicao}º Lugar
+                        when 'deposito'
+                          span.badge.bg-info Depósito
+                        when 'saque'
+                          span.badge.bg-warning Saque
+                        when 'admin'
+                          span.badge.bg-danger Admin
+                    td(class=transacao.quantidade > 0 ? 'text-success' : 'text-danger')
+                      if transacao.isPremio
+                        if transacao.tipo === 'compra' && transacao.valorPago
+                          | -R$ #{transacao.valorPago.toFixed(2)}
+                          br
+                          span.text-success +#{transacao.quantidade} pts
+                        else if transacao.tipo === 'deposito'
+                          | +R$ #{transacao.quantidade.toFixed(2)}
+                        else if transacao.tipo === 'saque'
+                          | -R$ #{Math.abs(transacao.quantidade).toFixed(2)}
+                        else
+                          | R$ #{Math.abs(transacao.quantidade).toFixed(2)}
+                      else
+                        | #{transacao.quantidade > 0 ? '+' : ''}#{transacao.quantidade} pts
+                    td
+                      if transacao.corrida
+                        | #{transacao.corrida.titulo}
+                    td
+                      if transacao.isPremio
+                        if transacao.tipo === 'compra'
+                          i.fas.fa-exchange-alt.text-primary.me-1
+                          | Conversão de Reais em Pontos
+                        else if transacao.tipo === 'deposito'
+                          i.fas.fa-university.text-info.me-1
+                          | Depósito em Dinheiro
+                        else if transacao.tipo === 'saque'
+                          i.fas.fa-money-bill-wave.text-warning.me-1
+                          | Saque em Dinheiro
+                        else if transacao.tipo === 'premio'
+                          i.fas.fa-trophy.text-warning.me-1
+                          | Premiação em Dinheiro
+                      if transacao.adminNote
+                        i.fas.fa-info-circle.me-1
+                        | #{transacao.adminNote}

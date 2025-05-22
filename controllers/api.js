@@ -19,7 +19,7 @@ const {
  */
 exports.getApi = (req, res) => {
   res.render('api/index', {
-    title: 'API Examples'
+    title: 'Exemplos de API'
   });
 };
 
@@ -392,7 +392,7 @@ exports.postTwilio = (req, res, next) => {
 
   const message = {
     to: req.body.number,
-    from: '+13472235148',
+    from: '+13375080272',
     body: req.body.message
   };
   twilio.messages.create(message).then((sentMessage) => {

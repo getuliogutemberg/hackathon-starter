@@ -1,22 +1,20 @@
 {
-  "name": "hackathon-starter",
+  "name": "moduloapp",
   "version": "8.0.1",
-  "description": "A boilerplate for Node.js web applications",
+  "description": "Uma aplicação web modular com autenticação, integrações de API e recursos avançados",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sahat/hackathon-starter.git"
+    "url": "https://github.com/getuliogutemberg/moduloapp.git"
   },
   "license": "MIT",
-  "author": "Sahat Yalkabov",
-  "contributors": [
-    "Yashar Fakhari (https://github.com/YasharF)"
-  ],
+  "author": "Getulio Gutemberg",
   "scripts": {
     "postinstall": "patch-package && npm run scss",
     "start": "npm run scss && node app.js",
+    "dev": "npm run scss && nodemon app.js",
     "test": "nyc mocha --timeout=60000 --exit",
     "lint": "eslint \"**/*.js\"",
-    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then husky install; fi",
+    "prepare": "cross-env NODE_ENV=$NODE_ENV && npx husky install",
     "scss": "sass --no-source-map --load-path=./ --update ./public/css:./public/css",
     "lintStage": "node_modules/.bin/lint-staged"
   },
@@ -34,7 +32,7 @@
     "@lob/lob-typescript-sdk": "^1.3.2",
     "@node-rs/bcrypt": "^1.7.3",
     "@octokit/rest": "^20.0.2",
-    "@passport-js/passport-twitter": "^1.0.8",
+    "@passport-js/passport-twitter": "1.0.7",
     "@popperjs/core": "^2.11.8",
     "axios": "^1.5.1",
     "body-parser": "^1.20.2",
@@ -49,6 +47,7 @@
     "express-flash": "^0.0.2",
     "express-rate-limit": "^7.1.1",
     "express-session": "^1.17.3",
+    "express-socket.io-session": "^1.3.5",
     "jquery": "^3.7.1",
     "lastfm": "^0.9.4",
     "lodash": "^4.17.21",
@@ -59,6 +58,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.6",
+    "nodemon": "^3.1.7",
     "passport": "^0.6.0",
     "passport-facebook": "^3.0.0",
     "passport-github2": "^0.1.12",
@@ -73,6 +73,7 @@
     "paypal-rest-sdk": "^1.8.1",
     "pug": "^3.0.2",
     "sass": "^1.69.3",
+    "socket.io": "^4.8.1",
     "stripe": "^14.1.0",
     "twilio": "^4.18.1",
     "twitch-passport": "^1.0.6",
@@ -80,6 +81,7 @@
   },
   "devDependencies": {
     "chai": "^4.3.10",
+    "cross-env": "^7.0.3",
     "eslint": "^8.51.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-chai-friendly": "^0.7.2",
@@ -99,5 +101,11 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "rules": {
+    "linebreak-style": [
+      "error",
+      "windows"
+    ]
   }
 }

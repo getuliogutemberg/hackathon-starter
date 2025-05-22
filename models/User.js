@@ -27,6 +27,28 @@ const userSchema = new mongoose.Schema({
     location: String,
     website: String,
     picture: String
+  },
+
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
+
+  carteira: {
+    pontos: { type: Number, default: 0 },
+    premios: { type: Number, default: 0 },
+    historico: [{
+      tipo: { 
+        type: String, 
+        enum: ['compra', 'uso', 'bonus', 'premio', 'deposito', 'admin', 'saque']
+      },
+      quantidade: Number,
+      corrida: { type: mongoose.Schema.Types.ObjectId, ref: 'Race' },
+      data: { type: Date, default: Date.now },
+      isPremio: { type: Boolean, default: false },
+      posicao: { type: Number },
+      adminNote: String
+    }]
   }
 }, { timestamps: true });
 
@@ -66,6 +88,7 @@ userSchema.methods.gravatar = function gravatar(size) {
     return `https://gravatar.com/avatar/00000000000000000000000000000000?s=${size}&d=retro`;
   }
   const md5 = crypto.createHash('md5').update(this.email).digest('hex');
+  
   return `https://gravatar.com/avatar/${md5}?s=${size}&d=retro`;
 };
 

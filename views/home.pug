@@ -1,27 +1,875 @@
 extends layout
 
 block content
-  h1 Hackathon Starter
-  p.lead A boilerplate for Node.js web applications.
-  hr
-  .row
-    .col-md-6
-      h2 Heading
-      p Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui.
-      p
-        a.btn.btn-primary(href='#', role='button') View details »
-    .col-md-6
-      h2 Heading
-      p Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui.
-      p
-        a.btn.btn-primary(href='#', role='button') View details »
-    .col-md-6
-      h2 Heading
-      p Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui.
-      p
-        a.btn.btn-primary(href='#', role='button') View details »
-    .col-md-6
-      h2 Heading
-      p Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui.
-      p
-        a.btn.btn-primary(href='#', role='button') View details »
+  .page-header.d-flex.justify-content-between.align-items-center.mb-4
+    h3 
+      i.fas.fa-biking-group.me-2
+      | Corridas em Andamento
+    if user && user.isAdmin
+      button.btn.btn-primary(data-bs-toggle='modal' data-bs-target='#criarCorridaModal')
+        i.fas.fa-plus.me-2
+        | Nova Corrida
+
+  #corridas-container
+    each corrida in corridas
+      .card.mb-4.corrida-card(
+        data-corrida-id=corrida._id
+        class=`status-${corrida.status}`
+      )
+        .card-header.d-flex.justify-content-between.align-items-center
+          .race-status
+            case corrida.status
+              when 'espera'
+                span.badge.bg-secondary
+                  i.fas.fa-clock.me-1
+                  | Em Espera
+              when 'contagem'
+                span.badge.bg-warning.animate__animated.animate__pulse.animate__infinite
+                  i.fas.fa-stopwatch.me-1
+                  | Contagem Regressiva
+                  span.countdown 10
+              when 'start'
+                span.badge.bg-success.animate__animated.animate__pulse.animate__infinite
+                  i.fas.fa-play.me-1
+                  | Em Andamento
+              when 'pausada'
+                span.badge.bg-warning
+                  i.fas.fa-pause.me-1
+                  | Pausada
+              when 'finalizada'
+                span.badge.bg-info
+                  i.fas.fa-flag-checkered.me-1
+                  | Finalizada
+          if corrida.premioTotal > 0
+            span.badge.bg-success.fs-6
+              i.fas.fa-trophy.me-1
+              | Prêmio: R$ #{corrida.premioTotal.toFixed(2)}
+
+        .card-body
+          h4.card-title.mb-3 #{corrida.titulo}
+          p.text-muted.mb-4 #{corrida.descricao}
+
+          if (corrida.status === 'espera' || corrida.status === 'contagem' || corrida.status === 'start' || corrida.status === 'pausada' || corrida.status === 'finalizada')
+            .race-track.mb-4
+              .track-background
+                .lane-dividers
+                  .lane-divider
+                  .lane-divider
+                  .lane-divider
+              .finish-line
+                i.fas.fa-flag-checkered
+              .cyclists-container
+                - const participantesOrdenados = corrida.participantes.sort((a, b) => b.ultimaInteracao.timestamp - a.ultimaInteracao.timestamp)
+                each participante, index in participantesOrdenados
+                  - const progresso = corrida.status === 'finalizada' ? 100 : (corrida.status === 'start' ? (corrida.pontuacaoAtual / corrida.pontuacaoMaxima) * 100 : 0)
+                  - const posicao = corrida.status === 'finalizada' ? `right: ${progresso - 100 + (index * 4)}%` : corrida.status === 'espera' ? 'left: 0%' : progresso <= 50 ? `left: ${progresso - (index * 4)}%` : `right: ${100 - progresso + (index * 4)}%`
+                  
+                  .cyclist(
+                    class=`position-${index + 1}`
+                    data-user-id=participante.usuario._id
+                    title=`${participante.usuario.profile && participante.usuario.profile.name !== undefined ? participante.usuario.profile.name : 'Usuário'} - ${participante.pontuacao} pts`
+                    style=posicao
+                  )
+                    .cyclist-name= participante.usuario.profile && participante.usuario.profile.name !== undefined ? participante.usuario.profile.name : 'Usuário'
+                    .cyclist-info.d-flex.align-items-center.gap-2
+                      .cyclist-icon.i.fas.fa-bicycle.text-white
+
+          if corrida.status === 'finalizada' && corrida.podium && corrida.podium.length > 0
+            .podium-container.mb-3
+              h6.mb-3
+                i.fas.fa-trophy.me-2.text-warning
+                | Pódium
+              .podium-grid
+                each position in corrida.podium
+                  .podium-card(class=`position-${position.posicao}`)
+                    .position-badge #{position.posicao}º
+                    if position.usuario && position.usuario.profile && position.usuario.profile.picture
+                      img.podium-avatar(src=position.usuario.profile.picture, alt=position.usuario.profile.name)
+                    else if position.usuario && position.usuario.gravatar
+                      - const userName = position.usuario.profile ? position.usuario.profile.name : 'Usuário'
+                      img.podium-avatar(src=position.usuario.gravatar(), alt=userName)
+                    else
+                      img.podium-avatar(src='/images/default-avatar.png', alt='Avatar padrão')
+                    .podium-info
+                      .podium-name
+                        if position.usuario && position.usuario.profile && position.usuario.profile.name
+                          | #{position.usuario.profile.name}
+                        else
+                          | Usuário
+                      .podium-points
+                        if position.posicao === 1
+                          | Prêmio: R$ #{Math.floor(corrida.premioTotal * 0.7)} 
+                        else if position.posicao === 2  
+                          | Prêmio: R$ #{Math.floor(corrida.premioTotal * 0.2)}
+                        else if position.posicao === 3
+                          | Prêmio: R$ #{Math.floor(corrida.premioTotal * 0.1)}
+
+          // Requisitos da Corrida (apenas em espera)
+          if corrida.status === 'espera'
+            - const totalPontosDisponiveis = corrida.participantes.reduce((acc, p) => acc + (p.pontosDisponiveis || 0), 0)
+            .alert.alert-info.mb-3
+              h6.mb-2
+                i.fas.fa-list-check.me-2
+                | Requisitos para Iniciar:
+              ul.mb-0
+                li(class=corrida.participantes.length >= 2 ? 'text-success' : 'text-danger')
+                  i(class=`fas fa-${corrida.participantes.length >= 2 ? 'check' : 'times'} me-2`)
+                  | Mínimo de 2 participantes (atual: #{corrida.participantes.length})
+                li(class=totalPontosDisponiveis >= corrida.pontuacaoMaxima ? 'text-success' : 'text-danger')
+                  i(class=`fas fa-${totalPontosDisponiveis >= corrida.pontuacaoMaxima ? 'check' : 'times'} me-2`)
+                  | Total de pontos: #{totalPontosDisponiveis} / #{corrida.pontuacaoMaxima} necessários
+
+          // Barra de Progresso Principal
+          .progress.mb-3(style='height: 25px;')
+            if corrida.status === 'espera'
+              .progress-bar.bg-info(
+                role='progressbar'
+                style=`width: ${(corrida.participantes.length / 10) * 100}%`
+              )
+                | #{corrida.participantes.length}/10 Participantes
+            else
+              .progress-bar.bg-primary(
+                role='progressbar'
+                style=`width: ${(corrida.pontuacaoAtual / corrida.pontuacaoMaxima) * 100}%`
+              )
+                | #{corrida.pontuacaoAtual} / #{corrida.pontuacaoMaxima} pts
+          
+
+          // Grid de Participantes
+          .participants-grid.mb-4
+            - const participantesOrdenados = corrida.participantes.slice(corrida.status === 'finalizada' ? 3 : 0).sort((a, b) => {
+            -   if (!a.ultimaInteracao) return 1;
+            -   if (!b.ultimaInteracao) return -1;
+            -   return b.ultimaInteracao.timestamp - a.ultimaInteracao.timestamp;
+            - })
+            each participante, index in participantesOrdenados
+              - const isCurrentUser = user && participante.usuario && participante.usuario._id.toString() === user._id.toString()
+              .participant-card(class=isCurrentUser ? 'current-user' : '')
+                if participante.ultimaInteracao
+                  .position-badge #{index + 1}º
+                .participant-name 
+                  if participante.usuario.profile && participante.usuario.profile.picture
+                    img.me-2(src=participante.usuario.profile.picture, style='height: 25px; width: 25px; border-radius: 50%;')
+                  else
+                    img.me-2(src=participante.usuario.gravatar(), style='height: 25px; width: 25px; border-radius: 50%;')
+                  | #{participante.usuario.profile ? participante.usuario.profile.name : 'Sem nome'}
+                .participant-info
+                  if participante.pontuacao > 0
+                    .participant-points 
+                      .icon.fas.fa-coins.me-1
+                      | #{participante.pontuacao} pts
+                  if participante.ultimaInteracao && participante.ultimaInteracao.timestamp && participante.ultimaInteracao.pontos
+                    .participant-last-interaction
+                      .icon.fas.fa-clock.me-1
+                      - const dataValida = new Date(participante.ultimaInteracao.timestamp)
+                      if !isNaN(dataValida.getTime())
+                        | #{dataValida.toLocaleTimeString('pt-BR')} 
+                        if participante.ultimaInteracao.pontos > 0
+                          | - #{participante.ultimaInteracao.pontos} pts
+
+          // Ações da Corrida
+          .race-actions.d-flex.gap-2
+            if user
+              - const isParticipante = corrida.participantes.find(p => p.usuario && p.usuario._id.toString() === user._id.toString())
+              - const isCriador = corrida.criador && corrida.criador._id.toString() === user._id.toString()
+
+              // Ações do Participante
+              if isParticipante
+                if corrida.status === 'start'
+                  // Campo para gastar pontos
+                  form.mb-2(action=`/corrida/${corrida._id}/interagir`, method='POST')
+                    input(type='hidden', name='_csrf', value=_csrf)
+                    .input-group
+                      input.form-control(
+                        type='number'
+                        name='pontos'
+                        min='1'
+                        max=isParticipante.pontosDisponiveis
+                        required
+                        placeholder='Quantidade de pontos'
+                      )
+                      button.btn.btn-primary(type='submit')
+                        i.fas.fa-coins.me-2
+                        | Usar Pontos
+                    small.form-text.text-muted
+                      | Você tem #{isParticipante.pontosDisponiveis} pontos disponíveis
+
+                // Botão de Detalhes
+                a.btn.btn-info(href=`/corrida/${corrida._id}`)
+                  i.fas.fa-info-circle.me-2
+                  | Ver Detalhes
+
+                // Botão de Sair (apenas em espera)
+                if corrida.status === 'espera'
+                  form.d-inline-block(action=`/corrida/${corrida._id}/sair`, method='POST')
+                    input(type='hidden', name='_csrf', value=_csrf)
+                    button.btn.btn-danger(type='submit')
+                      i.fas.fa-sign-out-alt.me-2
+                      | Sair da Corrida
+
+              // Ações do Criador
+              if isCriador
+                .btn-group.mt-2
+                  case corrida.status
+                    when 'contagem'
+                      form.d-inline-block(action=`/corrida/${corrida._id}/cancelar-contagem`, method='POST')
+                        input(type='hidden', name='_csrf', value=_csrf)
+                        button.btn.btn-warning(type='submit')
+                          i.fas.fa-stop.me-2
+                          | Cancelar Contagem
+                    when 'start'
+                      form.d-inline-block(action=`/corrida/${corrida._id}/pausar`, method='POST')
+                        input(type='hidden', name='_csrf', value=_csrf)
+                        button.btn.btn-warning(type='submit')
+                          i.fas.fa-pause.me-2
+                          | Pausar Corrida
+                    when 'pausada'
+                      form.d-inline-block(action=`/corrida/${corrida._id}/retomar`, method='POST')
+                        input(type='hidden', name='_csrf', value=_csrf)
+                        button.btn.btn-success(type='submit')
+                          i.fas.fa-play.me-2
+                          | Continuar Corrida
+                    when 'espera'
+                      .btn-group
+                        if corrida.participantes.length >= 2
+                          - const totalPontosDisponiveis = corrida.participantes.reduce((acc, p) => acc + (p.pontosDisponiveis || 0), 0)
+                          - const temPontosNecessarios = totalPontosDisponiveis >= corrida.pontuacaoMaxima
+                          if temPontosNecessarios
+                            form.d-inline-block(action=`/corrida/${corrida._id}/iniciar`, method='POST')
+                              input(type='hidden', name='_csrf', value=_csrf)
+                              button.btn.btn-info(type='submit')
+                                i.fas.fa-flag.me-2
+                                | Dar Largada
+                        // Botão de Excluir (apenas em espera)
+                        form.d-inline-block(action=`/corrida/${corrida._id}/excluir`, method='POST')
+                          input(type='hidden', name='_csrf', value=_csrf)
+                          button.btn.btn-danger(type='submit', onclick='return confirm("Tem certeza que deseja excluir esta corrida?")')
+                            i.fas.fa-trash.me-2
+                            | Excluir Corrida
+
+              // Botão de Participar para não participantes
+              if !isParticipante && corrida.status === 'espera'
+                form(action=`/corrida/${corrida._id}/participar`, method='POST')
+                  input(type='hidden', name='_csrf', value=_csrf)
+                  button.btn.btn-success(type='submit')
+                    i.fas.fa-play.me-2
+                    | Participar
+            else
+              a.btn.btn-primary(href='/login')
+                i.fas.fa-sign-in-alt.me-2
+                | Faça login para participar
+
+          
+                      
+
+        .card-footer.text-muted.d-flex.justify-content-between
+          div
+            i.fas.fa-user.me-1
+            | Criado por #{corrida.criador.profile.name || 'Usuário'}
+          if corrida.startTime
+            div
+              i.fas.fa-clock.me-1
+              | Iniciado em #{new Date(corrida.startTime).toLocaleString()}
+
+  // Modal de Criar Corrida
+  include partials/criar-corrida-modal
+
+block append head
+  style.
+    .corrida-card {
+      border: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .corrida-card:hover {
+      transform: translateY(-5px);
+    }
+    .status-start {
+      border-left: 5px solid #28a745;
+    }
+    .status-espera {
+      border-left: 5px solid #6c757d;
+    }
+    .status-contagem {
+      border-left: 5px solid #ffc107;
+    }
+    .status-finalizada {
+      border-left: 5px solid #17a2b8;
+    }
+    .participants-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    .participant-card {a
+      padding: 1rem;
+      background: #fff;
+      border-radius: 8px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+    .participant-card.current-user {
+      
+      background: linear-gradient(45deg, rgba(212, 255, 222, 0.4), rgba(240, 255, 244, 0.4));
+      position: relative;
+      z-index: 1;
+      border: 1px solid rgba(40, 167, 69, 0.2);
+    }
+    .participant-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-bottom: 0.5rem;
+    }
+    .participant-name {
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+    .participant-points {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    .race-actions {
+      margin-top: 1rem;
+    }
+    .animate__pulse {
+      animation-duration: 2s;
+    }
+
+    // Estilos do Pódium
+    .podium-container {
+      background: var(--bg-secondary);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    .podium-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .podium-card {
+      position: relative;
+      text-align: center;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    .position-1 {
+      background: linear-gradient(45deg, #ffd700, #ffed4a);
+    }
+
+    .position-2 {
+      background: linear-gradient(45deg, #c0c0c0, #e0e0e0);
+    }
+
+    .position-3 {
+      background: linear-gradient(45deg, #cd7f32, #dea47e);
+    }
+
+    .position-badge {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: #fff;
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      line-height: 25px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.8rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      color: #333;
+      border: 2px solid #28a745;
+    }
+
+    .podium-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      margin-bottom: 0.5rem;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .participant-card {
+      position: relative;  /* Adicionado para posicionamento do badge */
+    }
+
+    .race-track {
+      position: relative;
+      height: 200px;
+      background: #2c3e50;
+      border-radius: 10px;
+      margin: 20px 0;
+      overflow: hidden;
+      border: 4px solid #34495e;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .track-background {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        90deg,
+        #2c3e50,
+        #2c3e50 50px,
+        #34495e 50px,
+        #34495e 100px
+      );
+    }
+
+    .lane-dividers {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    .lane-divider {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .lane-divider:nth-child(1) { top: 25%; }
+    .lane-divider:nth-child(2) { top: 50%; }
+    .lane-divider:nth-child(3) { top: 75%; }
+
+    .cyclists-container {
+      position: relative;
+      height: 100%;
+      transition: width 1s ease-in-out;
+      min-width: 50px;
+    }
+
+    .cyclist {
+      position: absolute;
+      font-size: 30px;
+      transition: all 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cyclist i {
+      transform: scaleX(-1);
+      filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+    }
+
+    .cyclist-name {
+      color: white;
+      font-size: 14px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      white-space: nowrap;
+    }
+
+    .cyclist.position-1 { 
+      top: 12.5%; 
+      i { color: #ffd700; } /* Dourado */
+    }
+    .cyclist.position-2 { 
+      top: 37.5%; 
+      i { color: #c0c0c0; } /* Prata */
+    }
+    .cyclist.position-3 { 
+      top: 62.5%; 
+      i { color: #cd7f32; } /* Bronze */
+    }
+    .cyclist.position-4 { 
+      top: 87.5%; 
+      i { color: #ffffff; } /* Branco */
+    }
+
+    .finish-line {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 40px;
+      background: repeating-linear-gradient(
+        45deg,
+        #000,
+        #000 10px,
+        #fff 10px,
+        #fff 20px
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-left: 4px solid #fff;
+    }
+
+    .finish-line i {
+      position: absolute;
+      right: -20px;
+      color: #fff;
+      font-size: 40px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    @keyframes pedaling {
+      0% { transform: scaleX(-1) rotate(-5deg); }
+      50% { transform: scaleX(-1) rotate(5deg); }
+      100% { transform: scaleX(-1) rotate(-5deg); }
+    }
+
+    .cyclist i {
+      animation: pedaling 0.5s infinite ease-in-out;
+    }
+
+block append scripts
+  script.
+    const socket = io();
+
+    // Função para criar card de corrida
+    function createRaceCard(corrida) {
+      return `
+        <div class="card mb-4 corrida-card" data-corrida-id="${corrida._id}" class="status-${corrida.status}">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="race-status">
+              ${(() => {
+                switch(corrida.status) {
+                  case 'espera':
+                    return `
+                      <span class="badge bg-secondary">
+                        <i class="fas fa-clock me-1"></i>
+                        Em Espera
+                      </span>`;
+                  case 'contagem':
+                    return `
+                      <span class="badge bg-warning animate__animated animate__pulse animate__infinite">
+                        <i class="fas fa-stopwatch me-1"></i>
+                        Contagem Regressiva
+                        <span class="countdown">10</span>
+                      </span>`;
+                  case 'start':
+                    return `
+                      <span class="badge bg-success animate__animated animate__pulse animate__infinite">
+                        <i class="fas fa-play me-1"></i>
+                        Em Andamento
+                      </span>`;
+                  case 'pausada':
+                    return `
+                      <span class="badge bg-warning">
+                        <i class="fas fa-pause me-1"></i>
+                        Pausada
+                      </span>`;
+                  case 'finalizada':
+                    return `
+                      <span class="badge bg-info">
+                        <i class="fas fa-flag-checkered me-1"></i>
+                        Finalizada
+                      </span>`;
+                }
+              })()}
+            </div>
+            ${corrida.premioTotal > 0 ? `
+              <span class="badge bg-success fs-6">
+                <i class="fas fa-trophy me-1"></i>
+                Prêmio: R$ ${corrida.premioTotal.toFixed(2)}
+              </span>
+            ` : ''}
+          </div>
+
+          <div class="card-body">
+            <h4 class="card-title mb-3">${corrida.titulo}</h4>
+            <p class="text-muted mb-4">${corrida.descricao}</p>
+
+            ${(corrida.status === 'espera' || corrida.status === 'contagem' || corrida.status === 'start' || corrida.status === 'pausada' || corrida.status === 'finalizada') ? `
+              <div class="race-track mb-4">
+                <div class="track-background">
+                  <div class="lane-dividers">
+                    <div class="lane-divider"></div>
+                    <div class="lane-divider"></div>
+                    <div class="lane-divider"></div>
+                  </div>
+                </div>
+                <div class="finish-line">
+                  <i class="fas fa-flag-checkered"></i>
+                </div>
+                <div class="cyclists-container">
+                  ${corrida.participantes.sort((a, b) => b.ultimaInteracao.timestamp - a.ultimaInteracao.timestamp).map((participante, index) => {
+                    const progresso = corrida.status === 'finalizada' ? 100 : (corrida.status === 'start' ? (corrida.pontuacaoAtual / corrida.pontuacaoMaxima) * 100 : 0);
+                    const posicao = corrida.status === 'finalizada' ? `right: ${progresso - 100 + (index * 4)}%` : corrida.status === 'espera' ? 'left: 0%' : progresso <= 50 ? `left: ${progresso - (index * 4)}%` : `right: ${100 - progresso + (index * 4)}%`;
+                    
+                    return `
+                      <div class="cyclist position-${index + 1}"
+                           data-user-id="${participante.usuario._id}"
+                           title="${participante.usuario.profile && participante.usuario.profile.name !== undefined ? participante.usuario.profile.name : 'Usuário'} - ${participante.pontuacao} pts"
+                           style="${posicao}">
+                        <div class="cyclist-name">${participante.usuario.profile && participante.usuario.profile.name !== undefined ? participante.usuario.profile.name : 'Usuário'}</div>
+                        <div class="cyclist-info d-flex align-items-center gap-2">
+                          <div class="cyclist-icon i fas fa-bicycle text-white"></div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            ${corrida.status === 'espera' ? `
+              <div class="alert alert-info mb-3">
+                <h6 class="mb-2">
+                  <i class="fas fa-list-check me-2"></i>
+                  Requisitos para Iniciar:
+                </h6>
+                <ul class="mb-0">
+                  <li class="${corrida.participantes.length >= 2 ? 'text-success' : 'text-danger'}">
+                    <i class="fas fa-${corrida.participantes.length >= 2 ? 'check' : 'times'} me-2"></i>
+                    Mínimo de 2 participantes (atual: ${corrida.participantes.length})
+                  </li>
+                  <li class="${corrida.participantes.reduce((acc, p) => acc + (p.pontosDisponiveis || 0), 0) >= corrida.pontuacaoMaxima ? 'text-success' : 'text-danger'}">
+                    <i class="fas fa-${corrida.participantes.reduce((acc, p) => acc + (p.pontosDisponiveis || 0), 0) >= corrida.pontuacaoMaxima ? 'check' : 'times'} me-2"></i>
+                    Total de pontos: ${corrida.participantes.reduce((acc, p) => acc + (p.pontosDisponiveis || 0), 0)} / ${corrida.pontuacaoMaxima} necessários
+                  </li>
+                </ul>
+              </div>
+            ` : ''}
+
+            <div class="progress mb-3" style="height: 25px;">
+              ${corrida.status === 'espera' ? `
+                <div class="progress-bar bg-info"
+                     role="progressbar"
+                     style="width: ${(corrida.participantes.length / 10) * 100}%">
+                  ${corrida.participantes.length}/10 Participantes
+                </div>
+              ` : `
+                <div class="progress-bar bg-primary"
+                     role="progressbar"
+                     style="width: ${(corrida.pontuacaoAtual / corrida.pontuacaoMaxima) * 100}%">
+                  ${corrida.pontuacaoAtual} / ${corrida.pontuacaoMaxima} pts
+                </div>
+              `}
+            </div>
+
+            <div class="participants-grid mb-4">
+              ${corrida.participantes.slice(corrida.status === 'finalizada' ? 3 : 0)
+                .sort((a, b) => {
+                  if (!a.ultimaInteracao) return 1;
+                  if (!b.ultimaInteracao) return -1;
+                  return b.ultimaInteracao.timestamp - a.ultimaInteracao.timestamp;
+                })
+                .map((participante, index) => `
+                  <div class="participant-card ${participante.usuario._id === window.user?._id ? 'current-user' : ''}">
+                    ${participante.ultimaInteracao ? `<div class="position-badge">${index + 1}º</div>` : ''}
+                    <div class="participant-name">
+                      <img class="me-2" src="${participante.usuario.profile && participante.usuario.profile.picture ? participante.usuario.profile.picture : participante.usuario.gravatar()}" style="height: 25px; width: 25px; border-radius: 50%;">
+                      ${participante.usuario.profile ? participante.usuario.profile.name : 'Sem nome'}
+                    </div>
+                    <div class="participant-info">
+                      ${participante.pontuacao > 0 ? `
+                        <div class="participant-points">
+                          <div class="icon fas fa-coins me-1"></div>
+                          ${participante.pontuacao} pts
+                        </div>
+                      ` : ''}
+                      ${participante.ultimaInteracao && participante.ultimaInteracao.timestamp && participante.ultimaInteracao.pontos ? `
+                        <div class="participant-last-interaction">
+                          <div class="icon fas fa-clock me-1"></div>
+                          ${new Date(participante.ultimaInteracao.timestamp).toLocaleTimeString('pt-BR')}
+                          ${participante.ultimaInteracao.pontos > 0 ? ` - ${participante.ultimaInteracao.pontos} pts` : ''}
+                        </div>
+                      ` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+            </div>
+
+            <div class="race-actions d-flex gap-2">
+              
+              ${!corrida.participantes.find(p => p.usuario._id === window.user?._id) && corrida.status === 'espera' ? `
+                <form action="/corrida/${corrida._id}/participar" method="POST">
+                  <input type="hidden" name="_csrf" value="${window._csrf}">
+                  <button class="btn btn-success" type="submit">
+                    <i class="fas fa-play me-2"></i>
+                    Participar
+                  </button>
+                </form>
+              ` : ''}
+              ${corrida.criador._id === window.user?._id && corrida.status === 'espera' ? `
+                <form action="/corrida/${corrida._id}/excluir" method="POST" class="d-inline-block">
+                  <input type="hidden" name="_csrf" value="${window._csrf}">
+                  <button class="btn btn-danger" type="submit" onclick="return confirm('Tem certeza que deseja excluir esta corrida?')">
+                    <i class="fas fa-trash me-2"></i>
+                    Excluir Corrida
+                  </button>
+                </form>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="card-footer text-muted d-flex justify-content-between">
+            <div>
+              <i class="fas fa-user me-1"></i>
+              Criado por ${corrida.criador.profile.name || 'Usuário'}
+            </div>
+            ${corrida.startTime ? `
+              <div>
+                <i class="fas fa-clock me-1"></i>
+                Iniciado em ${new Date(corrida.startTime).toLocaleString()}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // Função para gerar badge de status
+    function getRaceStatusBadge(status) {
+      switch(status) {
+        case 'espera':
+          return `
+            <span class="badge bg-secondary">
+              <i class="fas fa-clock me-1"></i>
+              Em Espera
+            </span>`;
+        case 'contagem':
+          return `
+            <span class="badge bg-warning animate__animated animate__pulse animate__infinite">
+              <i class="fas fa-stopwatch me-1"></i>
+              Contagem Regressiva
+              <span class="countdown">10</span>
+            </span>`;
+        case 'start':
+          return `
+            <span class="badge bg-success animate__animated animate__pulse animate__infinite">
+              <i class="fas fa-play me-1"></i>
+              Em Andamento
+            </span>`;
+        case 'pausada':
+          return `
+            <span class="badge bg-warning">
+              <i class="fas fa-pause me-1"></i>
+              Pausada
+            </span>`;
+        case 'finalizada':
+          return `
+            <span class="badge bg-info">
+              <i class="fas fa-flag-checkered me-1"></i>
+              Finalizada
+            </span>`;
+      }
+    }
+
+    // Escuta eventos do socket
+    socket.on('race-event', (data) => {
+      console.log('Evento da corrida recebido:', data);
+      const corridasContainer = document.getElementById('corridas-container');
+      
+      switch(data.type) {
+        case 'participant-joined':
+          // Atualiza a lista de participantes na interface
+          const corridaAtualizada = data.data.corrida;
+          const novoParticipante = data.data.novoParticipante;
+          atualizarParticipantesCorrida(corridaAtualizada);
+          
+          // Exibe notificação do novo participante
+          const toast = new bootstrap.Toast(document.createElement('div'));
+          toast.innerHTML = `
+            <div class="toast-body">
+              ${novoParticipante.name} entrou na corrida!
+            </div>
+          `;
+          toast.show();
+          break;
+        case 'race-created':
+          // Adiciona nova corrida no topo da lista
+          const newRaceHtml = createRaceCard(data.data.corrida);
+          corridasContainer.insertAdjacentHTML('afterbegin', newRaceHtml);
+          
+          // Fecha o modal
+          const modal = document.getElementById('criarCorridaModal');
+          const bsModal = bootstrap.Modal.getInstance(modal);
+          if (bsModal) {
+            bsModal.hide();
+          }
+
+          // Limpa o formulário
+          document.querySelector('#criarCorridaModal form').reset();
+          break;
+
+        case 'race-deleted':
+          // Remove o card da corrida excluída
+          const cardToRemove = document.querySelector(`.corrida-card[data-corrida-id="${data.data.corridaId}"]`);
+          if (cardToRemove) {
+            cardToRemove.remove();
+          }
+          break;
+
+        case 'race-updated':
+          // Atualiza card existente
+          const existingCard = document.querySelector(`.corrida-card[data-corrida-id="${data.data.corrida._id}"]`);
+          if (existingCard) {
+            existingCard.outerHTML = createRaceCard(data.data.corrida);
+          }
+          break;
+
+        case 'race-interaction':
+          // Atualiza progresso e status
+          const raceCard = document.querySelector(`.corrida-card[data-corrida-id="${data.raceId}"]`);
+          if (raceCard) {
+            updateProgressBar(raceCard, data.data);
+            updateCyclistPositions(raceCard, data.data);
+            if (data.data.status === 'finalizada') {
+              updateRaceStatus(raceCard, 'finalizada');
+            }
+          }
+          break;
+      }
+    });
+
+    // Função para atualizar a interface
+    function atualizarParticipantesCorrida(corrida) {
+      const corridaElement = document.querySelector(`#corrida-${corrida._id}`);
+      if (corridaElement) {
+        // Atualiza o contador de participantes
+        const contadorElement = corridaElement.querySelector('.participantes-count');
+        if (contadorElement) {
+          contadorElement.textContent = corrida.participantes.length;
+        }
+        
+        // Atualiza a lista de participantes se existir
+        const listaElement = corridaElement.querySelector('.lista-participantes');
+        if (listaElement) {
+          listaElement.innerHTML = corrida.participantes.map(p => `
+            <div class="participante">
+              <img src="${p.usuario.profile.picture || p.usuario.gravatar}" alt="${p.usuario.profile.name}" class="avatar">
+              <span>${p.usuario.profile.name}</span>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    // Função para atualizar barra de progresso
+    function updateProgressBar(card, data) {
+      const progressBar = card.querySelector('.progress-bar');
+      if (progressBar) {
+        const progress = (data.pontuacaoAtual / data.pontuacaoMaxima) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.textContent = `${data.pontuacaoAtual} / ${data.pontuacaoMaxima} pts`;
+      }
+    }
+
+    // Função para atualizar posições dos ciclistas
+    function updateCyclistPositions(card, data) {
+      const cyclistsContainer = card.querySelector('.cyclists-container');
+      if (cyclistsContainer) {
+        // Atualiza posições...
+      }
+    }
+
+    // Função para atualizar status da corrida
+    function updateRaceStatus(card, status) {
+      const statusBadge = card.querySelector('.race-status');
+      if (statusBadge) {
+        statusBadge.innerHTML = getRaceStatusBadge(status);
+      }
+    }
+

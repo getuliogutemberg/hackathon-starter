@@ -1,0 +1,66 @@
+extends layout
+
+block content
+  .page-header
+    h3 
+      i.fas.fa-trophy.me-2.text-warning
+      | Ranking Global
+
+  .card
+    .card-body
+      .table-responsive
+        table.table.table-hover
+          thead
+            tr
+              th Posição
+              th Usuário
+              th Total em Premiações
+              if isAdmin
+                th Saldo em Reais
+                th Pontos Disponíveis
+              th Corridas Vencidas
+              th Última Vitória
+              if isAdmin
+                th Ações
+          tbody
+            each user, index in users
+              tr(class=currentUser && currentUser._id.toString() === user._id.toString() ? 'table-primary' : '')
+                td
+                  case index + 1
+                    when 1
+                      i.fas.fa-medal.me-2.text-warning
+                    when 2
+                      i.fas.fa-medal.me-2.text-secondary
+                    when 3
+                      i.fas.fa-medal.me-2.text-danger
+                    default
+                      span.me-2 #{index + 1}º
+                td
+                  if user.profile.picture
+                    img.me-2(src=user.profile.picture, style='height: 25px; width: 25px; border-radius: 50%;')
+                  else
+                    img.me-2(src=user.gravatarUrl, style='height: 25px; width: 25px; border-radius: 50%;')
+                  | #{user.profile.name || user.email}
+                td.text-warning
+                  i.fas.fa-trophy.me-2
+                  | R$ #{user.totalPremiacoes.toFixed(2)}
+                if isAdmin
+                  td.text-success
+                    i.fas.fa-money-bill.me-2
+                    | R$ #{user.carteira.premios.toFixed(2)}
+                  td.text-primary
+                    i.fas.fa-coins.me-2
+                    | #{user.carteira.pontos || 0} pts
+                td
+                  span.badge.bg-primary.me-2 #{user.vitorias || 0}
+                  small corridas
+                td
+                  if user.ultimaVitoria
+                    small.text-muted #{new Date(user.ultimaVitoria).toLocaleDateString()}
+                  else
+                    small.text-muted -
+                if isAdmin
+                  td
+                    a.btn.btn-sm.btn-primary(href=`/admin/user/${user._id}`)
+                      i.fas.fa-cog.me-1
+                      | Gerenciar

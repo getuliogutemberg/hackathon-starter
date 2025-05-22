@@ -1,0 +1,44 @@
+#criarCorridaModal.modal.fade(tabindex='-1')
+  .modal-dialog
+    .modal-content
+      .modal-header
+        h5.modal-title
+          i.fas.fa-flag-checkered.me-2
+          | Nova Corrida
+        button.btn-close(type='button' data-bs-dismiss='modal')
+      .modal-body
+        form(action='/corrida/criar', method='POST')
+          input(type='hidden', name='_csrf', value=_csrf)
+          .mb-3
+            label.form-label(for='titulo') Título
+            input.form-control#titulo(
+              type='text'
+              name='titulo'
+              required
+              placeholder='Digite o título da corrida'
+            )
+          .mb-3
+            label.form-label(for='descricao') Descrição
+            textarea.form-control#descricao(
+              name='descricao'
+              rows='3'
+              placeholder='Digite uma descrição para a corrida'
+            )
+          .mb-3
+            label.form-label(for='premioTotal') Prêmio (R$)
+            .input-group
+              span.input-group-text R$
+              input.form-control#premioTotal(
+                type='number'
+                name='premioTotal'
+                min='0'
+                step='0.01'
+                placeholder='0.00'
+              )
+            small.form-text.text-muted
+              | Deixe em branco para corrida sem prêmio ou insira um valor mínimo de R$ 10,00
+          .modal-footer
+            button.btn.btn-secondary(type='button' data-bs-dismiss='modal') Cancelar
+            button.btn.btn-primary(type='submit')
+              i.fas.fa-plus.me-2
+              | Criar Corrida 

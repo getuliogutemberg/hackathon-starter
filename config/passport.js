@@ -36,17 +36,17 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, (email, password, don
   User.findOne({ email: email.toLowerCase() })
     .then((user) => {
       if (!user) {
-        return done(null, false, { msg: `Email ${email} not found.` });
+        return done(null, false, { msg: `Email ${email} não encontrado.` });
       }
       if (!user.password) {
-        return done(null, false, { msg: 'Your account was registered using a sign-in provider. To enable password login, sign in using a provider, and then set a password under your user profile.' });
+        return done(null, false, { msg: 'Sua conta foi registrada usando um provedor de login. Para ativar o login por chave, faça login usando um provedor e defina uma chave em seu perfil de usuário.' });
       }
       user.comparePassword(password, (err, isMatch) => {
         if (err) { return done(err); }
         if (isMatch) {
           return done(null, user);
         }
-        return done(null, false, { msg: 'Invalid email or password.' });
+        return done(null, false, { msg: 'E-mail ou chave inválidos.' });
       });
     })
     .catch((err) => done(err));
@@ -82,7 +82,7 @@ passport.use(new SnapchatStrategy({
     if (req.user) {
       const existingUser = await User.findOne({ snapchat: profile.id });
       if (existingUser) {
-        req.flash('errors', { msg: 'There is already a Snapchat account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
+        req.flash('errors', { msg: 'Já existe uma conta Snapchat que pertence a você. Faça login com essa conta ou exclua-a e vincule-a à sua conta atual.' });
         return done(null, existingUser);
       }
       const user = await User.findById(req.user.id);
@@ -91,7 +91,7 @@ passport.use(new SnapchatStrategy({
       user.profile.name = user.profile.name || profile.displayName;
       user.profile.picture = user.profile.picture || profile.bitmoji.avatarUrl;
       await user.save();
-      req.flash('info', { msg: 'Snapchat account has been linked.' });
+      req.flash('info', { msg: 'A conta do Snapchat foi vinculada.' });
       return done(null, user);
     }
     const existingUser = await User.findOne({ snapchat: profile.id });
@@ -128,7 +128,7 @@ passport.use(new FacebookStrategy({
     if (req.user) {
       const existingUser = await User.findOne({ facebook: profile.id });
       if (existingUser) {
-        req.flash('errors', { msg: 'There is already a Facebook account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
+        req.flash('errors', { msg: 'Já existe uma conta no Facebook que pertence a você. Faça login com essa conta ou exclua-a e vincule-a à sua conta atual.' });
         return done(null, existingUser);
       }
       const user = await User.findById(req.user.id);
@@ -138,7 +138,7 @@ passport.use(new FacebookStrategy({
       user.profile.gender = user.profile.gender || profile._json.gender;
       user.profile.picture = user.profile.picture || `https://graph.facebook.com/${profile.id}/picture?type=large`;
       await user.save();
-      req.flash('info', { msg: 'Facebook account has been linked.' });
+      req.flash('info', { msg: 'A conta do Facebook foi vinculada.' });
       return done(null, user);
     }
     const existingUser = await User.findOne({ facebook: profile.id });
@@ -147,7 +147,7 @@ passport.use(new FacebookStrategy({
     }
     const existingEmailUser = await User.findOne({ email: profile._json.email });
     if (existingEmailUser) {
-      req.flash('errors', { msg: 'There is already an account using this email address. Sign in to that account and link it with Facebook manually from Account Settings.' });
+      req.flash('errors', { msg: 'Já existe uma conta usando este endereço de e-mail. Faça login nessa conta e vincule-a manualmente ao Facebook nas Configurações da conta.' });
       return done(null, existingEmailUser);
     }
     const user = new User();
@@ -179,7 +179,7 @@ passport.use(new GitHubStrategy({
     if (req.user) {
       const existingUser = await User.findOne({ github: profile.id });
       if (existingUser) {
-        req.flash('errors', { msg: 'There is already a GitHub account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
+        req.flash('errors', { msg: 'Já existe uma conta GitHub que pertence a você. Faça login com essa conta ou exclua-a e vincule-a à sua conta atual.' });
         return done(null, existingUser);
       }
       const user = await User.findById(req.user.id);
@@ -190,7 +190,7 @@ passport.use(new GitHubStrategy({
       user.profile.location = user.profile.location || profile._json.location;
       user.profile.website = user.profile.website || profile._json.blog;
       await user.save();
-      req.flash('info', { msg: 'GitHub account has been linked.' });
+      req.flash('info', { msg: 'A conta GitHub foi vinculada.' });
       return done(null, user);
     }
     const existingUser = await User.findOne({ github: profile.id });
@@ -202,13 +202,13 @@ passport.use(new GitHubStrategy({
       const existingEmailUser = await User.findOne({ email: emailValue });
 
       if (existingEmailUser) {
-        req.flash('errors', { msg: 'There is already an account using this email address. Sign in to that account and link it with GitHub manually from Account Settings.' });
+        req.flash('errors', { msg: 'Já existe uma conta usando este endereço de e-mail. Faça login nessa conta e vincule-a manualmente ao GitHub em Configurações da conta.' });
         return done(null, existingEmailUser);
       }
     } else {
       const existingEmailUser = await User.findOne({ email: profile._json.email });
       if (existingEmailUser) {
-        req.flash('errors', { msg: 'There is already an account using this email address. Sign in to that account and link it with GitHub manually from Account Settings.' });
+        req.flash('errors', { msg: 'Já existe uma conta usando este endereço de e-mail. Faça login nessa conta e vincule-a manualmente ao GitHub em Configurações da conta.' });
         return done(null, existingEmailUser);
       }
     }
@@ -240,7 +240,7 @@ passport.use(new TwitterStrategy({
     if (req.user) {
       const existingUser = await User.findOne({ twitter: profile.id });
       if (existingUser) {
-        req.flash('errors', { msg: 'There is already a Twitter account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
+        req.flash('errors', { msg: 'Já existe uma conta no Twitter que pertence a você. Faça login com essa conta ou exclua-a e vincule-a à sua conta atual.' });
         return done(null, existingUser);
       }
       const user = await User.findById(req.user.id);
@@ -250,7 +250,7 @@ passport.use(new TwitterStrategy({
       user.profile.location = user.profile.location || profile._json.location;
       user.profile.picture = user.profile.picture || profile._json.profile_image_url_https;
       await user.save();
-      req.flash('info', { msg: 'Twitter account has been linked.' });
+      req.flash('info', { msg: 'A conta do Twitter foi vinculada.' });
       return done(null, user);
     }
     const existingUser = await User.findOne({ twitter: profile.id });
@@ -287,7 +287,7 @@ const googleStrategyConfig = new GoogleStrategy({
     if (req.user) {
       const existingUser = await User.findOne({ google: profile.id });
       if (existingUser && (existingUser.id !== req.user.id)) {
-        req.flash('errors', { msg: 'There is already a Google account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
+        req.flash('errors', { msg: 'Já existe uma conta Google que pertence a você. Faça login com essa conta ou exclua-a e vincule-a à sua conta atual.' });
         return done(null, existingUser);
       }
       const user = await User.findById(req.user.id);
@@ -302,7 +302,7 @@ const googleStrategyConfig = new GoogleStrategy({
       user.profile.gender = user.profile.gender || profile._json.gender;
       user.profile.picture = user.profile.picture || profile._json.picture;
       await user.save();
-      req.flash('info', { msg: 'Google account has been linked.' });
+      req.flash('info', { msg: 'A conta do Google foi vinculada.' });
       return done(null, user);
     }
     const existingUser = await User.findOne({ google: profile.id });
@@ -311,7 +311,7 @@ const googleStrategyConfig = new GoogleStrategy({
     }
     const existingEmailUser = await User.findOne({ email: profile.emails[0].value });
     if (existingEmailUser) {
-      req.flash('errors', { msg: 'There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.' });
+      req.flash('errors', { msg: 'Já existe uma conta usando este endereço de e-mail. Faça login nessa conta e vincule-a manualmente ao Google nas Configurações da conta.' });
       return done(null, existingEmailUser);
     }
     const user = new User();
@@ -349,7 +349,7 @@ passport.use(new LinkedInStrategy({
     if (req.user) {
       const existingUser = await User.findOne({ linkedin: profile.id });
       if (existingUser) {
-        req.flash('errors', { msg: 'There is already a LinkedIn account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
+        req.flash('errors', { msg: 'Já existe uma conta no LinkedIn que pertence a você. Faça login com essa conta ou exclua-a e vincule-a à sua conta atual.' });
         return done(null, existingUser);
       }
       const user = await User.findById(req.user.id);
@@ -358,7 +358,7 @@ passport.use(new LinkedInStrategy({
       user.profile.name = user.profile.name || profile.displayName;
       user.profile.picture = user.profile.picture || profile.photos[3].value;
       await user.save();
-      req.flash('info', { msg: 'LinkedIn account has been linked.' });
+      req.flash('info', { msg: 'A conta do LinkedIn foi vinculada.' });
       return done(null, user);
     }
     const existingUser = await User.findOne({ linkedin: profile.id });
@@ -367,7 +367,7 @@ passport.use(new LinkedInStrategy({
     }
     const existingEmailUser = await User.findOne({ email: profile.emails[0].value });
     if (existingEmailUser) {
-      req.flash('errors', { msg: 'There is already an account using this email address. Sign in to that account and link it with LinkedIn manually from Account Settings.' });
+      req.flash('errors', { msg: 'Já existe uma conta usando este endereço de e-mail. Faça login nessa conta e vincule-a manualmente ao LinkedIn nas Configurações da conta.' });
       return done(null, existingEmailUser);
     }
     const user = new User();
@@ -397,7 +397,7 @@ const twitchStrategyConfig = new TwitchStrategy({
     if (req.user) {
       const existingUser = await User.findOne({ twitch: profile.id });
       if (existingUser && existingUser.id !== req.user.id) {
-        req.flash('errors', { msg: 'There is already a Twitch account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
+        req.flash('errors', { msg: 'Já existe uma conta Twitch que pertence a você. Faça login com essa conta ou exclua-a e vincule-a à sua conta atual.' });
         return done(null, existingUser);
       }
       const user = await User.findById(req.user.id);
@@ -412,7 +412,7 @@ const twitchStrategyConfig = new TwitchStrategy({
       user.profile.email = user.profile.gender || profile.email;
       user.profile.picture = user.profile.picture || profile.profile_image_url;
       await user.save();
-      req.flash('info', { msg: 'Twitch account has been linked.' });
+      req.flash('info', { msg: 'A conta Twitch foi vinculada.' });
       return done(null, user);
     }
     const existingUser = await User.findOne({ twitch: profile.id });
@@ -421,7 +421,7 @@ const twitchStrategyConfig = new TwitchStrategy({
     }
     const existingEmailUser = await User.findOne({ email: profile.email });
     if (existingEmailUser) {
-      req.flash('errors', { msg: 'There is already an account using this email address. Sign in to that account and link it with Twitch manually from Account Settings.' });
+      req.flash('errors', { msg: 'Já existe uma conta usando este endereço de e-mail. Faça login nessa conta e vincule-a manualmente ao Twitch nas Configurações da conta.' });
       return done(null, existingEmailUser);
     }
     const user = new User();
@@ -504,7 +504,7 @@ passport.use(new SteamOpenIdStrategy({
     if (req.user) {
       const existingUser = await User.findOne({ steam: steamId });
       if (existingUser) {
-        req.flash('errors', { msg: 'There is already an account associated with the SteamID. Sign in with that account or delete it, then link it with your current account.' });
+        req.flash('errors', { msg: 'Já existe uma conta associada ao SteamID. Faça login com essa conta ou exclua-a e vincule-a à sua conta atual.' });
         return done(null, existingUser);
       }
       const user = await User.findById(req.user.id);

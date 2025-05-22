@@ -1,0 +1,522 @@
+extends layout
+
+block content
+  - const participantesOrdenados = corrida.participantes ? corrida.participantes.sort((a, b) => b.pontuacao - a.pontuacao) : []
+  .container-fluid
+    .row
+      // Lado esquerdo - Detalhes expandidos da corrida
+      .col-md-8.pe-md-4
+        .card.mb-4
+          .card-header.d-flex.justify-content-between.align-items-center
+            h4.mb-0
+              case corrida.status
+                when 'espera'
+                  span.badge.bg-secondary.me-2
+                    i.fas.fa-clock.me-1
+                    | Em Espera
+                when 'contagem'
+                  span.badge.bg-warning.me-2.animate__animated.animate__pulse.animate__infinite
+                    i.fas.fa-stopwatch.me-1
+                    | Contagem Regressiva
+                    span.countdown 10
+                when 'start'
+                  span.badge.bg-success.me-2.animate__animated.animate__pulse.animate__infinite
+                    i.fas.fa-play.me-1
+                    | Em Andamento
+                when 'pausada'
+                  span.badge.bg-warning.me-2
+                    i.fas.fa-pause.me-1
+                    | Pausada
+                when 'finalizada'
+                  span.badge.bg-info.me-2
+                    i.fas.fa-flag-checkered.me-1
+                    | Finalizada
+              | #{corrida.titulo}
+            if corrida.premioTotal > 0
+              span.badge.bg-success.fs-6
+                i.fas.fa-trophy.me-1
+                | Prêmio: R$ #{corrida.premioTotal.toFixed(2)}
+
+          .card-body
+            // Descrição
+            p.text-muted.mb-4 #{corrida.descricao}
+
+            // Pista de corrida com bicicletas
+            if corrida.status !== 'espera'
+              .race-track.mb-4
+                .track-background
+                  .lane-dividers
+                    .lane-divider
+                    .lane-divider
+                    .lane-divider
+                .finish-line
+                  i.fas.fa-flag-checkered
+                .cyclists-container(style=`width: ${(corrida.pontuacaoAtual / corrida.pontuacaoMaxima) * 100}%`)
+                  if participantesOrdenados && participantesOrdenados.length > 0
+                    each participante, index in participantesOrdenados
+                      .cyclist(
+                        class=`position-${index + 1}`
+                        data-user-id=participante.usuario._id
+                        title=`${participante.usuario.profile ? participante.usuario.profile.name : 'Usuário'} - ${participante.pontuacao} pts`
+                      )
+                        i.fas.fa-bicycle
+                        .cyclist-name= participante.usuario.profile ? participante.usuario.profile.name : 'Usuário'
+
+            // Barra de Progresso
+            .progress.mb-4(style='height: 25px;')
+              .progress-bar.bg-primary(
+                role='progressbar'
+                style=`width: ${(corrida.pontuacaoAtual / corrida.pontuacaoMaxima) * 100}%`
+              )
+                | #{corrida.pontuacaoAtual} / #{corrida.pontuacaoMaxima} pts
+
+            // Ações da Corrida
+            if user
+              - const isParticipante = corrida.participantes.find(p => p.usuario && p.usuario._id.toString() === user._id.toString())
+              - const isCriador = corrida.criador && corrida.criador._id.toString() === user._id.toString()
+
+              .race-actions.d-flex.gap-2.mb-4
+                if isParticipante && corrida.status === 'start'
+                  form.flex-grow-1(action=`/corrida/${corrida._id}/interagir`, method='POST')
+                    input(type='hidden', name='_csrf', value=_csrf)
+                    .input-group
+                      input.form-control(
+                        type='number'
+                        name='pontos'
+                        min='1'
+                        max=isParticipante.pontosDisponiveis
+                        required
+                        placeholder='Quantidade de pontos'
+                      )
+                      button.btn.btn-primary(type='submit')
+                        i.fas.fa-coins.me-2
+                        | Usar Pontos
+                    small.form-text.text-muted
+                      | Você tem #{isParticipante.pontosDisponiveis} pontos disponíveis
+
+                if isCriador
+                  .btn-group
+                    case corrida.status
+                      when 'espera'
+                        if corrida.participantes.length >= 2
+                          form.d-inline-block(action=`/corrida/${corrida._id}/iniciar`, method='POST')
+                            input(type='hidden', name='_csrf', value=_csrf)
+                            button.btn.btn-success(type='submit')
+                              i.fas.fa-flag.me-2
+                              | Dar Largada
+                      when 'start'
+                        form.d-inline-block(action=`/corrida/${corrida._id}/pausar`, method='POST')
+                          input(type='hidden', name='_csrf', value=_csrf)
+                          button.btn.btn-warning(type='submit')
+                            i.fas.fa-pause.me-2
+                            | Pausar
+                      when 'pausada'
+                        form.d-inline-block(action=`/corrida/${corrida._id}/retomar`, method='POST')
+                          input(type='hidden', name='_csrf', value=_csrf)
+                          button.btn.btn-success(type='submit')
+                            i.fas.fa-play.me-2
+                            | Retomar
+
+            // Lista de Participantes
+            h5.mb-3 
+              i.fas.fa-users.me-2
+              | Participantes
+            .participants-grid.mb-4
+              each participante in corrida.participantes
+                - const isCurrentUser = user && participante.usuario._id.toString() === user._id.toString()
+                .participant-card(class=isCurrentUser ? 'current-user' : '')
+                  if participante.usuario.profile && participante.usuario.profile.picture
+                    img.participant-avatar(src=participante.usuario.profile.picture)
+                  else
+                    img.participant-avatar(src=participante.usuario.gravatar())
+                  .participant-info
+                    .participant-name #{participante.usuario.profile ? participante.usuario.profile.name : 'Usuário'}
+                    .participant-points #{participante.pontuacao} pts
+                    if participante.ultimaInteracao
+                      .participant-last-interaction
+                        small
+                          i.fas.fa-clock.me-1
+                          | Última: #{new Date(participante.ultimaInteracao.timestamp).toLocaleTimeString()}
+                          if participante.ultimaInteracao.pontos
+                            |  - #{participante.ultimaInteracao.pontos} pts
+
+      // Lado direito - Chat
+      .col-md-4
+        .card.chat-container
+          .card-header
+            h5.mb-0
+              i.fas.fa-comments.me-2
+              | Chat da Corrida
+          .card-body.chat-messages#chat-messages
+            if corrida.mensagens && corrida.mensagens.length > 0
+              each mensagem in corrida.mensagens
+                .message(class=user && mensagem.usuario && mensagem.usuario._id && mensagem.usuario._id.toString() === user._id.toString() ? 'message-sent' : 'message-received')
+                  .message-content
+                    if mensagem.usuario && mensagem.usuario.profile && mensagem.usuario.profile.picture
+                      img.message-avatar(src=mensagem.usuario.profile.picture, alt='Avatar')
+                    else if mensagem.usuario
+                      img.message-avatar(src=mensagem.usuario.gravatar(), alt='Avatar')
+                    else
+                      img.message-avatar(src='/images/default-avatar.png', alt='Avatar padrão')
+                    .message-text.text-dark
+                      .message-author #{mensagem.usuario && mensagem.usuario.profile ? mensagem.usuario.profile.name : 'Usuário'}
+                      p.mb-0.text-dark #{mensagem.texto}
+                      small.text-muted #{mensagem.criadoEm ? new Date(mensagem.criadoEm).toLocaleTimeString() : ''}
+            else
+              .text-center.text-muted
+                p Nenhuma mensagem ainda
+
+          .card-footer.bg-light
+            form#messageForm.d-flex.gap-2
+              input(type='hidden', name='_csrf', value=_csrf)
+              input.form-control#messageInput(
+                type='text'
+                placeholder='Digite sua mensagem...'
+                autocomplete='off'
+              )
+              button.btn.btn-primary(type='submit')
+                i.fas.fa-paper-plane
+
+block append head
+  style.
+    // Layout principal
+    .container-fluid {
+      padding: 20px;
+    }
+
+    // Card da corrida
+    .card {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    // Pista de corrida
+    .race-track {
+      height: 150px;
+      background: #2c3e50;
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+      margin: 20px 0;
+      border: 4px solid #34495e;
+    }
+
+    .track-background {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        90deg,
+        #2c3e50,
+        #2c3e50 50px,
+        #34495e 50px,
+        #34495e 100px
+      );
+    }
+
+    .lane-dividers .lane-divider {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: rgba(255,255,255,0.2);
+    }
+
+    .lane-divider:nth-child(1) { top: 25%; }
+    .lane-divider:nth-child(2) { top: 50%; }
+    .lane-divider:nth-child(3) { top: 75%; }
+
+    // Lista de participantes
+    .participants-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .participant-card {
+      background: var(--bg-secondary);
+      padding: 1rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: relative;
+    }
+
+    .participant-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .participant-info {
+      flex: 1;
+    }
+
+    .participant-name {
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+
+    .participant-points {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    // Chat
+    .chat-container {
+      height: calc(100vh - 80px);
+      position: sticky;
+      top: 80px;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0;
+      background: #f0f2f5;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      background: #f0f2f5;
+      min-height: 0;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message-sent {
+      align-items: flex-end;
+    }
+
+    .message-received {
+      align-items: flex-start;
+    }
+
+    .message-content {
+      max-width: 85%;
+      padding: 0.75rem;
+      border-radius: 12px;
+      position: relative;
+      display: flex;
+      gap: 0.5rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .message-sent .message-content {
+      background-color: #dcf8c6;
+      border-radius: 12px 12px 0 12px;
+    }
+
+    .message-received .message-content {
+      background-color: white;
+      border-radius: 12px 12px 12px 0;
+    }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .message-text {
+      flex: 1;
+      color: #303030;
+    }
+
+    .message-author {
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+      color: #075e54;
+    }
+
+    .message-sent .message-content small,
+    .message-received .message-content small {
+      color: #667781;
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      display: block;
+    }
+
+    .card-header {
+      background: #075e54;
+      color: white;
+      border-bottom: none;
+    }
+
+    .card-footer {
+      background: #f0f2f5;
+      border-top: 1px solid #e0e0e0;
+      padding: 1rem;
+      margin-top: auto;
+    }
+
+    #messageForm {
+      margin-bottom: 0;
+    }
+
+    #messageInput {
+      border-radius: 20px;
+      padding-left: 1rem;
+      padding-right: 1rem;
+      border: 1px solid #e0e0e0;
+    }
+
+    #messageForm button {
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    // Estilização da scrollbar do chat
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+      background: #f0f2f5;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: #bbb;
+      border-radius: 3px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+
+    // Barra de progresso
+    .progress {
+      height: 25px !important;
+      background: var(--bg-secondary);
+    }
+
+    .progress-bar {
+      transition: width 0.5s ease;
+      font-weight: bold;
+    }
+
+    // Ações da corrida
+    .race-actions {
+      background: var(--bg-secondary);
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    // Ciclistas
+    .cyclist {
+      position: absolute;
+      transition: all 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .cyclist i {
+      font-size: 24px;
+      transform: scaleX(-1);
+      filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+    }
+
+    .cyclist-name {
+      color: white;
+      font-size: 0.8rem;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      white-space: nowrap;
+    }
+
+    // Responsividade
+    @media (max-width: 768px) {
+      .container-fluid {
+        padding: 10px;
+      }
+
+      .chat-container {
+        height: 400px;
+        margin-top: 20px;
+      }
+
+      .participants-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+block append scripts
+  script.
+    const socket = io();
+    const messageForm = document.getElementById('messageForm');
+    const messageInput = document.getElementById('messageInput');
+    const messagesContainer = document.getElementById('chat-messages');
+    const currentUserId = '!{user ? user._id : ""}';
+
+    // Rola para última mensagem
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // Socket.IO eventos
+    socket.emit('join-race', '#{corrida._id}');
+
+    // Envia mensagem
+    messageForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      try {
+        const formData = new FormData();
+        formData.append('mensagem', message);
+        formData.append('_csrf', '#{_csrf}');
+
+        const response = await fetch(`/corrida/#{corrida._id}/mensagem`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'CSRF-Token': '#{_csrf}'
+          },
+          body: JSON.stringify({ 
+            mensagem: message,
+            _csrf: '#{_csrf}'
+          })
+        });
+
+        if (!response.ok) throw new Error('Erro ao enviar mensagem');
+        
+        messageInput.value = '';
+      } catch (err) {
+        console.error('Erro:', err);
+      }
+    });
+
+    // Recebe mensagem
+    socket.on('race-message', (data) => {
+      if (data.raceId === '#{corrida._id}') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${data.userId === currentUserId ? 'message-sent' : 'message-received'}`;
+        
+        messageDiv.innerHTML = `
+          <div class="message-content text-dark">
+            <img class="message-avatar" src="${data.userAvatar || '/images/default-avatar.png'}">
+            <div class="message-text">
+              <div class="message-author">${data.userName}</div>
+              <p class="mb-0">${data.message}</p>
+              <small class="text-muted">${new Date().toLocaleTimeString()}</small>
+            </div>
+          </div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    });

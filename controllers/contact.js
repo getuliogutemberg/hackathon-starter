@@ -10,7 +10,7 @@ exports.getContact = (req, res) => {
   const unknownUser = !(req.user);
 
   res.render('contact', {
-    title: 'Contact',
+    title: 'Contato',
     sitekey: process.env.RECAPTCHA_SITE_KEY,
     unknownUser,
   });
@@ -25,10 +25,10 @@ exports.postContact = async (req, res) => {
   let fromName;
   let fromEmail;
   if (!req.user) {
-    if (validator.isEmpty(req.body.name)) validationErrors.push({ msg: 'Please enter your name' });
-    if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Please enter a valid email address.' });
+    if (validator.isEmpty(req.body.name)) validationErrors.push({ msg: 'Por favor digite seu nome' });
+    if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Insira um endereço de e-mail válido.' });
   }
-  if (validator.isEmpty(req.body.message)) validationErrors.push({ msg: 'Please enter your message.' });
+  if (validator.isEmpty(req.body.message)) validationErrors.push({ msg: 'Por favor, digite sua mensagem.' });
 
   function getValidateReCAPTCHA(token) {
     return axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
@@ -41,7 +41,7 @@ exports.postContact = async (req, res) => {
   try {
     const validateReCAPTCHA = await getValidateReCAPTCHA(req.body['g-recaptcha-response']);
     if (!validateReCAPTCHA.data.success) {
-      validationErrors.push({ msg: 'reCAPTCHA validation failed.' });
+      validationErrors.push({ msg: 'A validação do reCAPTCHA falhou.' });
     }
 
     if (validationErrors.length) {
@@ -72,13 +72,13 @@ exports.postContact = async (req, res) => {
     const mailOptions = {
       to: process.env.SITE_CONTACT_EMAIL,
       from: `${fromName} <${fromEmail}>`,
-      subject: 'Contact Form | Hackathon Starter',
+      subject: 'Contato | ModuloApp',
       text: req.body.message
     };
 
     return transporter.sendMail(mailOptions)
       .then(() => {
-        req.flash('success', { msg: 'Email has been sent successfully!' });
+        req.flash('success', { msg: 'O e-mail foi enviado com sucesso!' });
         res.redirect('/contact');
       })
       .catch((err) => {
@@ -90,18 +90,18 @@ exports.postContact = async (req, res) => {
           return transporter.sendMail(mailOptions);
         }
         console.log('ERROR: Could not send contact email after security downgrade.\n', err);
-        req.flash('errors', { msg: 'Error sending the message. Please try again shortly.' });
+        req.flash('errors', { msg: 'Erro ao enviar a mensagem. Por favor, tente novamente em breve.' });
         return false;
       })
       .then((result) => {
         if (result) {
-          req.flash('success', { msg: 'Email has been sent successfully!' });
+          req.flash('success', { msg: 'O e-mail foi enviado com sucesso!' });
           return res.redirect('/contact');
         }
       })
       .catch((err) => {
         console.log('ERROR: Could not send contact email.\n', err);
-        req.flash('errors', { msg: 'Error sending the message. Please try again shortly.' });
+        req.flash('errors', { msg: 'Erro ao enviar a mensagem. Por favor, tente novamente em breve.' });
         return res.redirect('/contact');
       });
   } catch (err) {

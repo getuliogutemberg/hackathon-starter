@@ -1,63 +1,94 @@
-//.navbar.navbar-light.fixed-top.navbar-expand-lg.bg-light
-//  .container
-//    a.navbar-brand(href='/')
-//      i.fas.fa-cube
-//      | Project name
-//    button.navbar-toggler(type='button', data-toggle='collapse', data-target='.navbar-collapse')
-//      span.sr-only Toggle navigation
-//      span.navbar-toggler-icon
-//    .collapse.navbar-collapse
-//      ul.nav.navbar-nav
-//        li.nav-item(class=(title === 'Home') ? 'active' : undefined)
-//          a.nav-link(href='/') Home
-//        li.nav-item(class=(title === 'API Examples') ? 'active' : undefined)
-//          a.nav-link(href='/api') API Examples
-//        li.nav-item(class=(title === 'Contact') ? 'active' : undefined)
-//          a.nav-link(href='/contact') Contact
-//      ul.nav.navbar-nav.ml-auto
-//        if !user
-//          li.nav-item(class=(title === 'Login') ? 'active' : undefined)
-//            a.nav-link(href='/login') Login
-//          li.nav-item(class=(title === 'Create Account') ? 'active' : undefined)
-//            a.nav-link(href='/signup') Create Account
-//        else
-//          li.dropdown(class=(title === 'Account Management') ? 'active' : undefined).nav-item
-//            a.dropdown-toggle.nav-link(href='#', data-toggle='dropdown')
-//              if user.profile.picture
-//                img(src=user.profile.picture)
-//              else
-//                img(src=user.gravatar(60))
-//              span= user.profile.name || user.email || user.id
-//              i.caret
-//            div.dropdown-menu
-//              a.dropdown-item(href='/account') My Account
-//              div.dropdown-divider
-//              a.dropdown-item(href='/logout') Logout
-//
-//
-//
-
-nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
-  .container
+nav.navbar.navbar-expand-lg.navbar-dark.bg-primary.fixed-top
+  .container-fluid
     a.navbar-brand(href='/')
-      img.d-inline-block.align-text-top(src='/bootstrap-logo.svg' alt='' width='30' height='24')
-      |  Hackathon Starter
-    button.navbar-toggler(type='button' data-bs-toggle='collapse' data-bs-target='#navbarColor01' aria-controls='navbarColor01' aria-expanded='false' aria-label='Toggle navigation')
+      i.fas.fa-bicycle.me-2.animate__animated.animate__slideInRight
+      | SpeedRush
+    button.navbar-toggler(type='button', data-bs-toggle='collapse', data-bs-target='.navbar-collapse')
       span.navbar-toggler-icon
-    #navbarColor01.collapse.navbar-collapse
-      ul.navbar-nav.me-auto.mb-2.mb-lg-0
-        li.nav-item
-          a.nav-link(class=(title === 'Home') ? 'active' : '', href='/') Home
-        li.nav-item
-          a.nav-link(class=(title === 'API Examples') ? 'active' : '', href='/api') API Examples
-        li.nav-item
-          a.nav-link(class=(title === 'Contact') ? 'active' : '', href='/contact') Contact
+    .collapse.navbar-collapse.justify-content-between
+      // Menu da esquerda
+      ul.navbar-nav
+        li.nav-item(class=(title === 'Ranking') ? 'active' : undefined)
+          a.nav-link(href='/ranking')
+            i.fas.fa-trophy.me-1
+            | Ranking
+        if user
+          li.nav-item(class=(title === 'Chat') ? 'active' : undefined)
+            a.nav-link(href='/chat')
+              i.fas.fa-comments.me-1
+              | Chat
+              if user.unreadMessages
+                span.badge.bg-danger.ms-1 #{user.unreadMessages}
+          li.nav-item(class=(title === 'Carteira') ? 'active' : undefined)
+            a.nav-link.d-flex.align-items-center(href='/carteira')
+              i.fas.fa-wallet.me-2
+              span.d-flex.gap-2.align-items-center
+                span.badge.bg-light.text-primary
+                  i.fas.fa-coins.me-1
+                  | #{user.carteira.pontos} pts
+                span.badge.bg-success.text-light
+                  i.fas.fa-money-bill.me-1
+                  | R$ #{user.carteira.premios.toFixed(2)}
+          if user.isAdmin
+            li.nav-item(class=(title === 'Relatório Bancário') ? 'active' : undefined)
+              a.nav-link(href='/bank')
+                i.fas.fa-university.me-1
+                | Relatório Bancário
+            li.nav-item(class=(title === 'Gerenciar Corridas') ? 'active' : undefined)
+              a.nav-link(href='/races')
+                i.fas.fa-flag-checkered.me-1
+                | Gerenciar Corridas
 
-      form.d-flex
+      // Menu da direita
+      ul.navbar-nav.ms-auto
         if !user
-          a.btn.btn-outline-light.me-2(href='/login') Login
-          a.btn.btn-primary(href='/signup') Create Account
+          li.nav-item(class=(title === 'Login') ? 'active' : undefined)
+            a.nav-link(href='/login') Login
+          li.nav-item(class=(title === 'Create Account') ? 'active' : undefined)
+            a.nav-link(href='/signup') Criar Conta
         else
-          a.btn.btn-primary.me-2(href='/account') My Account
-          a.btn.btn-outline-danger(href='/logout') Sign out
+          li.nav-item.dropdown
+            a.nav-link.dropdown-toggle.d-flex.align-items-center(href='#', data-bs-toggle='dropdown')
+              if user.profile.picture
+                img.me-2(src=user.profile.picture, style='height: 25px; width: 25px; border-radius: 50%;')
+              else
+                img.me-2(src=user.gravatar(), style='height: 25px; width: 25px; border-radius: 50%;')
+              span= user.profile.name || user.email || user.id
+              if user.isAdmin
+                span.badge.bg-warning.ms-1 Admin
+            ul.dropdown-menu.dropdown-menu-end
+              li
+                a.dropdown-item(href='/account')
+                  i.fas.fa-user.me-2
+                  | Minha Conta
+              if user.isAdmin
+                li
+                  form.dropdown-item.p-0(action='/remove-admin', method='POST', style='cursor: pointer;')
+                    input(type='hidden', name='_csrf', value=_csrf)
+                    input(type='hidden', name='userId', value=user._id)
+                    input(type='hidden', name='secretKey', value=process.env.ADMIN_SECRET_KEY)
+                    button.btn.btn-link.text-danger.w-100.text-start.px-3(type='submit')
+                      i.fas.fa-user-times.me-2
+                      | Remover Admin
+                li.dropdown-divider
+              li.dropdown-divider
+              li
+                a.dropdown-item(href='/logout')
+                  i.fas.fa-sign-out-alt.me-2
+                  | Sair
+
+block append head
+  style.
+    .theme-switch-wrapper {
+      margin: 0 1rem;
+    }
+    .theme-switch-wrapper button:hover {
+      opacity: 0.8;
+    }
+    .theme-switch-wrapper button:focus {
+      box-shadow: none;
+    }
+    [data-theme="dark"] #themeIcon {
+      color: #ffd700;
+    }
 

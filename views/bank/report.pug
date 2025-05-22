@@ -1,0 +1,108 @@
+extends ../layout
+
+block content
+  .page-header
+    h3
+      i.fas.fa-university.me-2
+      | Relatório Bancário
+
+  .row
+    .col-md-4.mb-4
+      .card.bg-primary.text-white
+        .card-body
+          h5.card-title
+            i.fas.fa-wallet.me-2
+            | Total a Pagar
+          h2.display-6 R$ #{totalSaldos.toFixed(2)}
+          small.text-light Total que o banco deve aos usuários
+
+    .col-md-4.mb-4
+      .card.bg-success.text-white
+        .card-body
+          h5.card-title
+            i.fas.fa-money-bill-wave.me-2
+            | Total em Caixa
+          h2.display-6 R$ #{totalDepositos.toFixed(2)}
+          small.text-light Total depositado na plataforma
+
+    .col-md-4.mb-4
+      .card(class=lucroAtual >= 0 ? 'bg-info' : 'bg-danger').text-white
+        .card-body
+          h5.card-title
+            i.fas.fa-chart-line.me-2
+            | Lucro Líquido
+          h2.display-6 R$ #{lucroAtual.toFixed(2)}
+          small.text-light Diferença entre depósitos e saldos
+
+  .card.mt-4
+    .card-body
+      h4.card-title
+        i.fas.fa-history.me-2
+        | Histórico de Transações
+      .table-responsive
+        table.table.table-hover
+          thead
+            tr
+              th Data
+              th Usuário
+              th Tipo
+              th Valor
+              th Detalhes
+          tbody
+            each transacao in transacoes
+              if transacao.data && transacao.quantidade
+                tr
+                  td #{transacao.data.toLocaleString()}
+                  td #{transacao.usuario.nome}
+                  td
+                    case transacao.tipo
+                      when 'deposito'
+                        span.badge.bg-success
+                          i.fas.fa-plus-circle.me-1
+                          | Depósito
+                      when 'saque'
+                        span.badge.bg-warning
+                          i.fas.fa-minus-circle.me-1
+                          | Saque
+                      when 'premio'
+                        span.badge.bg-warning
+                          i.fas.fa-trophy.me-1
+                          | Premiação
+                      when 'compra'
+                        span.badge.bg-info
+                          i.fas.fa-shopping-cart.me-1
+                          | Compra
+                      when 'uso'
+                        span.badge.bg-primary
+                          i.fas.fa-coins.me-1
+                          | Uso
+                      when 'bonus'
+                        span.badge.bg-success
+                          i.fas.fa-gift.me-1
+                          | Bônus
+                      when 'admin'
+                        span.badge.bg-danger
+                          i.fas.fa-user-shield.me-1
+                          | Admin
+                      default
+                        span.badge.bg-secondary
+                          i.fas.fa-question-circle.me-1
+                          | Outro
+                  td(class=transacao.quantidade > 0 ? 'text-success' : 'text-danger')
+                    | R$ #{Math.abs(transacao.quantidade).toFixed(2)}
+                  td
+                    if transacao.adminNote
+                      i.fas.fa-info-circle.me-1
+                      | #{transacao.adminNote}
+                    else if transacao.tipo === 'premio' && transacao.posicao
+                      i.fas.fa-trophy.me-1
+                      | #{transacao.posicao}º Lugar
+                    else if transacao.tipo === 'saque'
+                      i.fas.fa-money-bill-wave.me-1
+                      | Saque em dinheiro
+                    else if transacao.tipo === 'deposito'
+                      i.fas.fa-university.me-1
+                      | Depósito em dinheiro
+                    else if transacao.tipo === 'compra'
+                      i.fas.fa-exchange-alt.me-1
+                      | Compra de pontos

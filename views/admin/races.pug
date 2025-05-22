@@ -1,0 +1,124 @@
+extends ../layout
+
+block content
+  .page-header.d-flex.justify-content-between.align-items-center.mb-4
+    h3 
+      i.fas.fa-flag-checkered.me-2
+      | Gerenciar Corridas
+    button.btn.btn-primary(data-bs-toggle='modal' data-bs-target='#criarCorridaModal')
+      i.fas.fa-plus.me-2
+      | Nova Corrida
+
+  .card
+    .card-body
+      .table-responsive
+        table.table.table-hover
+          thead
+            tr
+              th ID
+              th Título
+              th Status
+              th Prêmio
+              th Participantes
+              th Criado em
+              th Ações
+          tbody
+            each corrida in corridas
+              tr(data-corrida-id=corrida._id)
+                td= corrida._id
+                td= corrida.titulo
+                td
+                  case corrida.status
+                    when 'espera'
+                      span.badge.bg-secondary Em Espera
+                    when 'contagem'
+                      span.badge.bg-warning Contagem
+                    when 'start'
+                      span.badge.bg-success Em Andamento
+                    when 'pausada'
+                      span.badge.bg-warning Pausada
+                    when 'finalizada'
+                      span.badge.bg-info Finalizada
+                td
+                  if corrida.premioTotal > 0
+                    | R$ #{corrida.premioTotal.toFixed(2)}
+                  else
+                    | -
+                td #{corrida.participantes.length}
+                td= new Date(corrida.createdAt).toLocaleString()
+                td
+                  .btn-group
+                    button.btn.btn-sm.btn-info(
+                      data-bs-toggle='modal'
+                      data-bs-target='#editarCorridaModal'
+                      data-corrida=JSON.stringify(corrida)
+                    )
+                      i.fas.fa-edit
+                    form.d-inline-block(
+                      action=`/races/${corrida._id}/delete`
+                      method='POST'
+                      onsubmit=`return confirm("Tem certeza que deseja excluir a corrida '${corrida.titulo}'? ${corrida.status !== 'espera' ? '\\nAtenção: Esta corrida já foi iniciada!' : ''}")`
+                    )
+                      input(type='hidden' name='_csrf' value=_csrf)
+                      button.btn.btn-sm.btn-danger(type='submit')
+                        i.fas.fa-trash
+
+  // Modal de Criar Corrida
+  include ../partials/criar-corrida-modal
+
+  // Modal de Editar Corrida
+  #editarCorridaModal.modal.fade(tabindex='-1')
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title
+            i.fas.fa-edit.me-2
+            | Editar Corrida
+          button.btn-close(type='button' data-bs-dismiss='modal')
+        .modal-body
+          form#editarCorridaForm(action='' method='POST')
+            input(type='hidden' name='_csrf' value=_csrf)
+            .mb-3
+              label.form-label(for='editTitulo') Título
+              input.form-control#editTitulo(
+                type='text'
+                name='titulo'
+                required
+              )
+            .mb-3
+              label.form-label(for='editDescricao') Descrição
+              textarea.form-control#editDescricao(
+                name='descricao'
+                rows='3'
+              )
+            .mb-3
+              label.form-label(for='editPremioTotal') Prêmio (R$)
+              .input-group
+                span.input-group-text R$
+                input.form-control#editPremioTotal(
+                  type='number'
+                  name='premioTotal'
+                  min='0'
+                  step='0.01'
+                )
+            .modal-footer
+              button.btn.btn-secondary(type='button' data-bs-dismiss='modal') Cancelar
+              button.btn.btn-primary(type='submit')
+                i.fas.fa-save.me-2
+                | Salvar Alterações
+
+block append scripts
+  script.
+    // Preenche o modal de edição com os dados da corrida
+    const editarCorridaModal = document.getElementById('editarCorridaModal');
+    editarCorridaModal.addEventListener('show.bs.modal', (event) => {
+      const button = event.relatedTarget;
+      const corrida = JSON.parse(button.getAttribute('data-corrida'));
+      
+      const form = document.getElementById('editarCorridaForm');
+      form.action = `/races/${corrida._id}/update`;
+      
+      document.getElementById('editTitulo').value = corrida.titulo;
+      document.getElementById('editDescricao').value = corrida.descricao;
+      document.getElementById('editPremioTotal').value = corrida.premioTotal;
+    }); 
